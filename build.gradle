@@ -1,0 +1,18 @@
+plugins {
+    id 'java'
+}
+
+group 'com.moriable'
+version '0.1'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile project(':rawhttp:rawhttp-core')
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
