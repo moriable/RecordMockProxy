@@ -1,3 +1,6 @@
 .gradle/
 .idea/
 Build/
+
+ca.crt
+ca.key
