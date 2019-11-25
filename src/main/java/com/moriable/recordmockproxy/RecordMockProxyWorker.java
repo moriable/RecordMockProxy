@@ -1,5 +1,7 @@
 package com.moriable.recordmockproxy;
 
+import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
+import com.moriable.recordmockproxy.common.Util;
 import rawhttp.core.RawHttp;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
@@ -9,30 +11,42 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.security.KeyStore;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class RecordMockProxyWorker implements Runnable {
-    private final Logger logger = Logger.getLogger(RecordMockProxyWorker.class.getSimpleName());
+    private final Logger logger = Logger.getLogger(RecordMockProxyWorker.class.getSimpleName() + Thread.currentThread().getId());
+
     private Socket socket;
-    private RecordMockProxy serverRef;
-    private RawHttp http = new RawHttp();
     private boolean isSSL;
 
-    protected RecordMockProxyWorker(Socket socket, RecordMockProxy server) {
+    private RecordMockProxy serverRef;
+    private RecordMockProxyService service;
+    private RawHttp http;
+    private RecordMockProxyAdmin admin;
+
+    protected RecordMockProxyWorker(Socket socket) {
         this.socket = socket;
-        this.serverRef = server;
         this.isSSL = socket instanceof SSLSocket;
+    }
+
+    protected void init(RecordMockProxy server, RecordMockProxyService service, RawHttp http, RecordMockProxyAdmin admin) {
+        this.serverRef = server;
+        this.service = service;
+        this.http = http;
+        this.admin = admin;
     }
 
     @Override
     public void run() {
+        RawHttpRequest request = null;
         try {
-            RawHttpRequest request = http.parseRequest(socket.getInputStream());
+            request = http.parseRequest(socket.getInputStream());
 
             if ("CONNECT".equals(request.getMethod())) {
                 doConnect(request);
@@ -45,7 +59,11 @@ public class RecordMockProxyWorker implements Runnable {
                 if (!socket.isClosed()) socket.close();
             } catch (IOException ex) { }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, e.getMessage(), e);
+            String uri = "";
+            if (request != null) {
+                uri = request.getUri().toString();
+            }
+            logger.log(Level.SEVERE, e.getMessage() + " " + uri, e);
             try {
                 if (!socket.isClosed()) socket.close();
             } catch (IOException ex) { }
@@ -73,17 +91,28 @@ public class RecordMockProxyWorker implements Runnable {
 
         ssl.startHandshake();
 
-        serverRef.submitWorker(new RecordMockProxyWorker((Socket) ssl, serverRef));
+        serverRef.submitWorker(new RecordMockProxyWorker((Socket) ssl));
     }
 
     private void doRequest(RawHttpRequest request) throws IOException, URISyntaxException {
-        logger.info(request.getUri().toString());
+        Date requestDate = new Date();
 
         int port = request.getUri().getPort();
         if (port == -1 && isSSL) {
             port = 443;
         } else if (port == -1 && !isSSL) {
             port = 80;
+        }
+
+        String requestName = Util.getRequestName(request, requestDate, port);
+
+        admin.putRequest(requestName, requestDate, request, isSSL);
+        logger.info(requestName);
+
+        String mockId = Util.getMockId(request, port);
+        File mockDir = new File("mock/" + mockId);
+        if (mockDir.exists()) {
+            responseMock(mockDir);
         }
 
         Socket relaysocket;
@@ -93,17 +122,56 @@ public class RecordMockProxyWorker implements Runnable {
             relaysocket = new Socket(request.getUri().getHost(), port);
         }
 
-        request.writeTo(relaysocket.getOutputStream(), 8192);
+        if (request.getBody().isPresent()) {
+            File requestFile = new File("record/" + requestName);
+            requestFile.createNewFile();
+            try(FileOutputStream requestStrema = new FileOutputStream(requestFile)) {
+                request.writeTo(new OutputStream[]{relaysocket.getOutputStream(), requestStrema}, 8192);
+            }
+        } else {
+            request.writeTo(new OutputStream[]{relaysocket.getOutputStream()}, 8192);
+        }
 
         RawHttpResponse response = http.parseResponse(relaysocket.getInputStream());
 
+        String contentType = "Unknown";
+        if (response.getHeaders().get("Content-Type") != null && response.getHeaders().get("Content-Type").size() > 0) {
+            contentType = response.getHeaders().get("Content-Type").get(0);
+            contentType = contentType.substring(contentType.indexOf("/") + 1);
+        }
+        String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType + "^" + (new Date().getTime() - requestDate.getTime());
+
         if (!socket.isClosed()) {
-            response.writeTo(socket.getOutputStream(), 8192);
+            File responseFile = new File("record/" + responseName);
+            responseFile.createNewFile();
+            try(FileOutputStream responseStream = new FileOutputStream(responseFile)) {
+                response.writeTo(new OutputStream[]{socket.getOutputStream(), responseStream}, 8192);
+            }
             socket.close();
         } else {
             logger.warning("client socket closed");
         }
 
+        admin.putResponse(requestName, responseName, response);
+
         relaysocket.close();
+    }
+
+    private RawHttpResponse responseMock(File mockDir) {
+        File mockBody = null;
+        for (File file : mockDir.listFiles()) {
+            if (file.getName().startsWith("body^")) {
+                mockBody = file;
+                break;
+            }
+        }
+
+        if (mockBody == null) {
+            return null;
+        }
+
+        String contentType = mockBody.getName().substring("body^".length());
+
+        return null;
     }
 }

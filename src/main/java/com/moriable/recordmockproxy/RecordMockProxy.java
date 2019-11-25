@@ -1,5 +1,8 @@
 package com.moriable.recordmockproxy;
 
+import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
+import rawhttp.core.RawHttp;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -11,11 +14,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class RecordMockProxy {
-    private ExecutorService service = Executors.newFixedThreadPool(2);
+    private ExecutorService execService = Executors.newFixedThreadPool(4);
 
     private InetSocketAddress serverAddress;
 
     private boolean loop = true;
+
+    private RecordMockProxyService service = new RecordMockProxyService();
+
+    private RawHttp http = new RawHttp();
+
+    private RecordMockProxyAdmin admin = new RecordMockProxyAdmin();
 
     public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
         this.serverAddress = serverAddress;
@@ -39,12 +48,13 @@ public class RecordMockProxy {
                 while (loop) {
                     Socket socket = server.accept();
                     socket.setSoTimeout(30000);
-                    submitWorker(new RecordMockProxyWorker(socket, this));
+                    submitWorker(new RecordMockProxyWorker(socket));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
+        admin.start();
     }
 
     public void stop() {
@@ -52,6 +62,7 @@ public class RecordMockProxy {
     }
 
     protected void submitWorker(RecordMockProxyWorker worker) {
-        service.submit(worker);
+        worker.init(this, service, http, admin);
+        execService.submit(worker);
     }
 }

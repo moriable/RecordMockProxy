@@ -4,3 +4,6 @@ Build/
 
 ca.crt
 ca.key
+
+record/
+mock/
