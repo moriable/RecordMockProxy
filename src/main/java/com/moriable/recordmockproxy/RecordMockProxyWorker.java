@@ -109,30 +109,34 @@ public class RecordMockProxyWorker implements Runnable {
         admin.putRequest(requestName, requestDate, request, isSSL);
         logger.info(requestName);
 
+        RawHttpResponse response = null;
         String mockId = Util.getMockId(request, port);
         File mockDir = new File("mock/" + mockId);
+        logger.info(mockId);
         if (mockDir.exists()) {
-            responseMock(mockDir);
+            response = responseMock(mockDir);
         }
 
-        Socket relaysocket;
-        if (isSSL) {
-            relaysocket = SSLSocketFactory.getDefault().createSocket(request.getUri().getHost(), port);
-        } else {
-            relaysocket = new Socket(request.getUri().getHost(), port);
-        }
-
-        if (request.getBody().isPresent()) {
-            File requestFile = new File("record/" + requestName);
-            requestFile.createNewFile();
-            try(FileOutputStream requestStrema = new FileOutputStream(requestFile)) {
-                request.writeTo(new OutputStream[]{relaysocket.getOutputStream(), requestStrema}, 8192);
+        Socket relaysocket = null;
+        if (response == null) {
+            if (isSSL) {
+                relaysocket = SSLSocketFactory.getDefault().createSocket(request.getUri().getHost(), port);
+            } else {
+                relaysocket = new Socket(request.getUri().getHost(), port);
             }
-        } else {
-            request.writeTo(new OutputStream[]{relaysocket.getOutputStream()}, 8192);
-        }
 
-        RawHttpResponse response = http.parseResponse(relaysocket.getInputStream());
+            if (request.getBody().isPresent()) {
+                File requestFile = new File("record/" + requestName);
+                requestFile.createNewFile();
+                try (FileOutputStream requestStrema = new FileOutputStream(requestFile)) {
+                    request.writeTo(new OutputStream[]{relaysocket.getOutputStream(), requestStrema}, 8192);
+                }
+            } else {
+                request.writeTo(new OutputStream[]{relaysocket.getOutputStream()}, 8192);
+            }
+
+            response = http.parseResponse(relaysocket.getInputStream());
+        }
 
         String contentType = "Unknown";
         if (response.getHeaders().get("Content-Type") != null && response.getHeaders().get("Content-Type").size() > 0) {
@@ -154,24 +158,21 @@ public class RecordMockProxyWorker implements Runnable {
 
         admin.putResponse(requestName, responseName, response);
 
-        relaysocket.close();
+        if (relaysocket != null) {
+            relaysocket.close();
+        }
     }
 
     private RawHttpResponse responseMock(File mockDir) {
-        File mockBody = null;
-        for (File file : mockDir.listFiles()) {
-            if (file.getName().startsWith("body^")) {
-                mockBody = file;
-                break;
-            }
-        }
-
-        if (mockBody == null) {
+        try {
+            SequenceInputStream inputStream = new SequenceInputStream(
+                    new FileInputStream(mockDir.getAbsolutePath() + "/head"),
+                    new FileInputStream(mockDir.getAbsolutePath() + "/body")
+            );
+            return http.parseResponse(inputStream);
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, e.getMessage());
             return null;
         }
-
-        String contentType = mockBody.getName().substring("body^".length());
-
-        return null;
     }
 }

@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.moriable.recordmockproxy.admin.dto.RecordDto;
 import com.moriable.recordmockproxy.admin.form.MockForm;
 import com.moriable.recordmockproxy.common.Util;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.codec.net.URLCodec;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
@@ -85,24 +84,23 @@ public class RecordMockProxyAdmin {
                        }
                    }
 
-                   if (form.getResponseHeaders() != null) {
-                       StringBuilder b = new StringBuilder();
-                       form.getResponseHeaders().forEach((key, value) -> {
-                           b.append(key + ": " + value + "\r\n");
-                       });
-                       b.append("\r\n");
-
-                       File head = new File(mockDir.getAbsolutePath() + "/head");
-                       try(OutputStream headStream = new FileOutputStream(head)) {
-                           for(String key : form.getResponseHeaders().keySet()){
+                   File head = new File(mockDir.getAbsolutePath() + "/head");
+                   try(OutputStream headStream = new FileOutputStream(head)) {
+                       headStream.write(("HTTP/1.1 " + form.getResponseStatus() + " " + form.getResponseStatusMessage() + "\r\n").getBytes());
+                       if (form.getResponseHeaders() != null) {
+                           for (String key : form.getResponseHeaders().keySet()) {
                                String value = form.getResponseHeaders().get(key);
                                headStream.write((key + ": " + value + "\r\n").getBytes());
                            }
                        }
+                       if (form.getResponseType() != null) {
+                           headStream.write(("Content-Type: " + form.getResponseType() + "\r\n").getBytes());
+                       }
+                       headStream.write(("\r\n").getBytes());
                    }
 
                    if (form.getResponseBody() != null) {
-                       File body = new File(mockDir.getAbsolutePath() + "/body^" + new URLCodec().encode(form.getResponseType()));
+                       File body = new File(mockDir.getAbsolutePath() + "/body");
                        try(OutputStream bodyStream = new FileOutputStream(body)) {
                            bodyStream.write(form.getResponseBody().getBytes());
                        }

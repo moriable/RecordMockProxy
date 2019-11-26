@@ -23,17 +23,19 @@ public class Util {
     }
 
     public static String getMockId(RawHttpRequest request, int port) {
+        String shortUri = snipUri(request.getUri(), 32);
         String hosthash = getHostHash(request.getUri().getHost(), port);
         String pathhash = getPathHash(request.getUri().getPath(), request.getUri().getPath());
 
-        return request.getMethod() + "^" + hosthash + "^" + pathhash;
+        return request.getMethod() + "^" + shortUri + "^" + hosthash + "^" + pathhash;
     }
 
     public static String getMockId(MockForm form) {
+        String shortUri = snipUri(form.getHost(), form.getPath(), 32);
         String hosthash = getHostHash(form.getHost(), form.getPort());
         String pathhash = getPathHash(form.getPath(), form.getPath());
 
-        return form.getMethod() + "^" + hosthash + "^" + pathhash;
+        return form.getMethod() + "^" + shortUri + "^" + hosthash + "^" + pathhash;
     }
 
     public static String getHostHash(String host, int port) {
@@ -49,10 +51,12 @@ public class Util {
     }
 
     public static String snipUri(URI uri, int len) {
-        String host = uri.getHost();
-        String path = "";
+        return snipUri(uri.getHost(), uri.getPath(), len);
+    }
+
+    public static String snipUri(String host, String path, int len) {
         try {
-            path = new URLCodec().encode(uri.getPath(), "UTF-8");
+            path = new URLCodec().encode(path, "UTF-8");
         } catch (UnsupportedEncodingException e) { }
 
         if ((host + path).length() <= len) {

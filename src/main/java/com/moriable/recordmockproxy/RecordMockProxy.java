@@ -36,8 +36,8 @@ public class RecordMockProxy {
                 "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %3$s %5$s%6$s%n");
 
         RecordMockProxy server = new RecordMockProxy(new InetSocketAddress("", 8080),
-                "ca.crt",
-                "ca.key");
+                "/Users/hiroki.nakamori/tmp/proxyca/ca.crt",
+                "/Users/hiroki.nakamori/tmp/proxyca/ca.key");
         server.start();
     }
 
