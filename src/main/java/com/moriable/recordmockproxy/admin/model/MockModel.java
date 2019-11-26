@@ -1,13 +1,11 @@
-package com.moriable.recordmockproxy.admin.dto;
+package com.moriable.recordmockproxy.admin.model;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 
 import java.util.Map;
 
 @Data
-public class MockDto {
+public class MockModel {
 
     private String id;
     private String method;

@@ -1,7 +1,7 @@
 package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
-import com.moriable.recordmockproxy.admin.dto.RecordDto;
+import com.moriable.recordmockproxy.admin.model.RecordModel;
 import com.moriable.recordmockproxy.admin.form.MockForm;
 import com.moriable.recordmockproxy.common.Util;
 import org.apache.commons.codec.net.URLCodec;
@@ -19,7 +19,7 @@ public class RecordMockProxyAdmin {
 
     private final Logger logger = Logger.getLogger(RecordMockProxyAdmin.class.getSimpleName());
 
-    Map<String, RecordDto> record = Collections.synchronizedMap(new LinkedHashMap<>());
+    Map<String, RecordModel> record = Collections.synchronizedMap(new LinkedHashMap<>());
 
     public void start() {
         Gson gson = new Gson();
@@ -35,7 +35,7 @@ public class RecordMockProxyAdmin {
 
                    logger.info(requestName);
 
-                   RecordDto recordDto = record.get(requestName);
+                   RecordModel recordDto = record.get(requestName);
                    if (recordDto == null) {
                        response.status(404);
                        return "{}";
@@ -122,7 +122,7 @@ public class RecordMockProxyAdmin {
     }
 
     public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
-        RecordDto dto = new RecordDto();
+        RecordModel dto = new RecordModel();
         dto.setId(requestName);
         dto.setDate(date.getTime());
 
@@ -133,7 +133,7 @@ public class RecordMockProxyAdmin {
             port = 80;
         }
 
-        RecordDto.RequestDto requestDto = new RecordDto.RequestDto();
+        RecordModel.RequestDto requestDto = new RecordModel.RequestDto();
         requestDto.setHost(request.getUri().getHost());
         requestDto.setPort(port);
         requestDto.setPath(request.getUri().getPath());
@@ -152,9 +152,9 @@ public class RecordMockProxyAdmin {
     }
 
     public void putResponse(String requestName, String responseName, RawHttpResponse response) {
-        RecordDto dto = record.get(requestName);
+        RecordModel dto = record.get(requestName);
 
-        RecordDto.ResponseDto responseDto = new RecordDto.ResponseDto();
+        RecordModel.ResponseDto responseDto = new RecordModel.ResponseDto();
         responseDto.setStatusCode(response.getStatusCode());
         responseDto.setHeaders(new HashMap<>());
         response.getHeaders().getHeaderNames().forEach(s -> {

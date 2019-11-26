@@ -1,13 +1,12 @@
-package com.moriable.recordmockproxy.admin.dto;
+package com.moriable.recordmockproxy.admin.model;
 
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Date;
 import java.util.Map;
 
 @Data
-public class RecordDto implements Serializable {
+public class RecordModel implements Serializable {
 
     private String id;
     private long date;
