@@ -1,9 +1,8 @@
 package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
-import com.moriable.recordmockproxy.RecordMockProxy;
-import com.moriable.recordmockproxy.admin.model.RecordModel;
 import com.moriable.recordmockproxy.admin.form.MockForm;
+import com.moriable.recordmockproxy.admin.model.RecordModel;
 import com.moriable.recordmockproxy.admin.model.RequestModel;
 import com.moriable.recordmockproxy.admin.model.ResponseModel;
 import com.moriable.recordmockproxy.common.Util;
@@ -75,6 +74,9 @@ public class RecordMockProxyAdmin {
                });
            });
            path("/mock", () -> {
+               get("", (request, response) -> {
+                   return "{}";
+               });
                post("", (request, response) -> {
                    MockForm form = gson.fromJson(request.body(), MockForm.class);
 
