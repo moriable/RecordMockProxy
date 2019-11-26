@@ -30,7 +30,7 @@ public class RecordMockProxyAdmin {
                    response.type("application/json");
                    return gson.toJson(record.values());
                });
-               get("/response/:id", (request, response) -> {
+               get("/:id/response", (request, response) -> {
                    String requestName = decodeRequestName(request.params(":id"));
 
                    logger.info(requestName);
