@@ -3,6 +3,8 @@ package com.moriable.recordmockproxy.admin;
 import com.google.gson.Gson;
 import com.moriable.recordmockproxy.admin.model.RecordModel;
 import com.moriable.recordmockproxy.admin.form.MockForm;
+import com.moriable.recordmockproxy.admin.model.RequestModel;
+import com.moriable.recordmockproxy.admin.model.ResponseModel;
 import com.moriable.recordmockproxy.common.Util;
 import org.apache.commons.codec.net.URLCodec;
 import rawhttp.core.RawHttpRequest;
@@ -42,9 +44,9 @@ public class RecordMockProxyAdmin {
                    }
 
                    String contentType = recordDto.getResponse().getHeaders().get("Content-Type");
-                   String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
-
                    response.type(contentType);
+
+                   String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
                    if (encoding != null && !encoding.isEmpty()) {
                        response.header("Content-Encoding", encoding);
                    }
@@ -133,7 +135,7 @@ public class RecordMockProxyAdmin {
             port = 80;
         }
 
-        RecordModel.RequestDto requestDto = new RecordModel.RequestDto();
+        RequestModel requestDto = new RequestModel();
         requestDto.setHost(request.getUri().getHost());
         requestDto.setPort(port);
         requestDto.setPath(request.getUri().getPath());
@@ -154,7 +156,7 @@ public class RecordMockProxyAdmin {
     public void putResponse(String requestName, String responseName, RawHttpResponse response) {
         RecordModel dto = record.get(requestName);
 
-        RecordModel.ResponseDto responseDto = new RecordModel.ResponseDto();
+        ResponseModel responseDto = new ResponseModel();
         responseDto.setStatusCode(response.getStatusCode());
         responseDto.setHeaders(new HashMap<>());
         response.getHeaders().getHeaderNames().forEach(s -> {
