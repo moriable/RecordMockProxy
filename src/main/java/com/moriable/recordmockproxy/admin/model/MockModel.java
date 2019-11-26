@@ -10,6 +10,7 @@ public class MockModel {
 
     private TragetModel target;
     private List<ResponseModel> mockResponses;
+    private MockRule rule;
 
     @Data
     public static class TragetModel {
@@ -19,5 +20,12 @@ public class MockModel {
         private int port;
         private String path;
         private String query;
+    }
+
+    public enum MockRule {
+        PROXY,
+        ONCE,
+        REPEAT,
+        RANDOM
     }
 }
