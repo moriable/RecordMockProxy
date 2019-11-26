@@ -26,7 +26,6 @@ public class RecordMockProxyWorker implements Runnable {
     private boolean isSSL;
 
     private RecordMockProxy serverRef;
-    private RecordMockProxyService service;
     private RawHttp http;
     private RecordMockProxyAdmin admin;
 
@@ -35,9 +34,8 @@ public class RecordMockProxyWorker implements Runnable {
         this.isSSL = socket instanceof SSLSocket;
     }
 
-    protected void init(RecordMockProxy server, RecordMockProxyService service, RawHttp http, RecordMockProxyAdmin admin) {
+    protected void init(RecordMockProxy server, RawHttp http, RecordMockProxyAdmin admin) {
         this.serverRef = server;
-        this.service = service;
         this.http = http;
         this.admin = admin;
     }

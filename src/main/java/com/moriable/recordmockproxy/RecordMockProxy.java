@@ -20,8 +20,6 @@ public class RecordMockProxy {
 
     private boolean loop = true;
 
-    private RecordMockProxyService service = new RecordMockProxyService();
-
     private RawHttp http = new RawHttp();
 
     private RecordMockProxyAdmin admin = new RecordMockProxyAdmin();
@@ -62,7 +60,7 @@ public class RecordMockProxy {
     }
 
     protected void submitWorker(RecordMockProxyWorker worker) {
-        worker.init(this, service, http, admin);
+        worker.init(this, http, admin);
         execService.submit(worker);
     }
 }
