@@ -1,6 +1,7 @@
 package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
+import org.apache.commons.cli.*;
 import rawhttp.core.RawHttp;
 
 import java.io.IOException;
@@ -22,20 +23,74 @@ public class RecordMockProxy {
 
     private RawHttp http = new RawHttp();
 
-    private RecordMockProxyAdmin admin = new RecordMockProxyAdmin();
+    private RecordMockProxyAdmin admin;
 
-    public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
+    public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath, int adminPort) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
+        admin = new RecordMockProxyAdmin(adminPort);
     }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %3$s %5$s%6$s%n");
 
-        RecordMockProxy server = new RecordMockProxy(new InetSocketAddress("", 8080),
-                "ca.crt",
-                "ca.key");
+        Options options = new Options();
+        options.addOption(Option.builder("pp")
+                .longOpt("proxy-port")
+                .hasArg()
+                .argName("proxy port number")
+                .desc("proxy port number")
+                .required()
+                .type(Number.class)
+                .build());
+
+        options.addOption(Option.builder("ap")
+                .longOpt("admin-port")
+                .hasArg()
+                .argName("admin port number")
+                .desc("admin port number")
+                .required()
+                .type(Number.class)
+                .build());
+
+        options.addOption(Option.builder("c")
+                .longOpt("cert")
+                .hasArg()
+                .argName("CA certificate file path")
+                .desc("CA certificate file path")
+                .required()
+                .type(String.class)
+                .build());
+
+        options.addOption(Option.builder("k")
+                .longOpt("key")
+                .hasArg()
+                .argName("CA private key file path")
+                .desc("CA private key file path")
+                .required()
+                .type(String.class)
+                .build());
+
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = null;
+        int proxyPort;
+        int adminPort;
+        try {
+            cmd = parser.parse(options, args);
+            proxyPort = ((Long)cmd.getParsedOptionValue("pp")).intValue();
+            adminPort = ((Long)cmd.getParsedOptionValue("ap")).intValue();
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            HelpFormatter hf = new HelpFormatter();
+            hf.printHelp("[opts]", options);
+            return;
+        }
+
+        RecordMockProxy server = new RecordMockProxy(new InetSocketAddress("", proxyPort),
+                cmd.getOptionValue("c"),
+                cmd.getOptionValue("k"),
+                adminPort);
         server.start();
     }
 

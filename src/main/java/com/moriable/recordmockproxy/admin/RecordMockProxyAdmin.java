@@ -1,6 +1,7 @@
 package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
+import com.moriable.recordmockproxy.RecordMockProxy;
 import com.moriable.recordmockproxy.admin.model.RecordModel;
 import com.moriable.recordmockproxy.admin.form.MockForm;
 import com.moriable.recordmockproxy.admin.model.RequestModel;
@@ -23,9 +24,16 @@ public class RecordMockProxyAdmin {
 
     Map<String, RecordModel> record = Collections.synchronizedMap(new LinkedHashMap<>());
 
+    private int port;
+
+    public RecordMockProxyAdmin(int adminPort) {
+        this.port = adminPort;
+    }
+
     public void start() {
         Gson gson = new Gson();
 
+        port(port);
         path("/api", () -> {
            path("/record", () -> {
                get("", (request, response) -> {
@@ -121,6 +129,10 @@ public class RecordMockProxyAdmin {
         exception(Exception.class, (exception, request, response) -> {
             logger.log(Level.SEVERE, exception.getMessage(), exception);
         });
+    }
+
+    public void stop() {
+        stop();
     }
 
     public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
