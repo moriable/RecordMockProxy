@@ -24,15 +24,32 @@ public class RecordMockProxyAdmin {
     Map<String, RecordModel> record = Collections.synchronizedMap(new LinkedHashMap<>());
 
     private int port;
+    private String cert;
 
-    public RecordMockProxyAdmin(int adminPort) {
+    public RecordMockProxyAdmin(int adminPort, String cert) {
         this.port = adminPort;
+        this.cert = cert;
     }
 
     public void start() {
         Gson gson = new Gson();
 
         port(port);
+        get("/cert", (request, response) -> {
+            response.type("application/x-x509-ca-cert");
+            try(BufferedInputStream input = new BufferedInputStream(new FileInputStream(cert));
+                BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
+                byte[] buffer = new byte[4096];
+                int len;
+                while ((len = input.read(buffer)) > 0) {
+                    output.write(buffer,0,len);
+                }
+
+                output.flush();
+            }
+
+            return response.raw();
+        });
         path("/api", () -> {
            path("/record", () -> {
                get("", (request, response) -> {
@@ -75,6 +92,7 @@ public class RecordMockProxyAdmin {
            });
            path("/mock", () -> {
                get("", (request, response) -> {
+                   response.type("application/json");
                    return "{}";
                });
                post("", (request, response) -> {
@@ -121,7 +139,11 @@ public class RecordMockProxyAdmin {
                    response.type("application/json");
                    return "{\"id\":\"" + mockId + "\"}";
                });
-               put("/:id/body", (request, response) -> {
+               put("/:id", (request, response) -> {
+                   response.type("application/json");
+                   return "{}";
+               });
+               post("/:id/body", (request, response) -> {
                    response.type("application/json");
                    return "{}";
                });

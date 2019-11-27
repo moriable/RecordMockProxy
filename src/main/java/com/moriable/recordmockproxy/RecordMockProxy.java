@@ -28,7 +28,7 @@ public class RecordMockProxy {
     public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath, int adminPort) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
-        admin = new RecordMockProxyAdmin(adminPort);
+        admin = new RecordMockProxyAdmin(adminPort, caCertPath);
     }
 
     public static void main(String[] args) throws Exception {
