@@ -3,10 +3,9 @@ package com.moriable.recordmockproxy.admin;
 import com.google.gson.Gson;
 import com.moriable.recordmockproxy.admin.form.MockForm;
 import com.moriable.recordmockproxy.admin.model.RecordModel;
-import com.moriable.recordmockproxy.admin.model.RequestModel;
-import com.moriable.recordmockproxy.admin.model.ResponseModel;
 import com.moriable.recordmockproxy.common.Util;
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.commons.io.FileUtils;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
 
@@ -25,10 +24,14 @@ public class RecordMockProxyAdmin {
 
     private int port;
     private String cert;
+    private File recordDir;
+    private File mockDir;
 
-    public RecordMockProxyAdmin(int adminPort, String cert) {
+    public RecordMockProxyAdmin(int adminPort, String cert, File recordDir, File mockDir) {
         this.port = adminPort;
         this.cert = cert;
+        this.recordDir = recordDir;
+        this.mockDir = mockDir;
     }
 
     public void start() {
@@ -37,12 +40,12 @@ public class RecordMockProxyAdmin {
         port(port);
         get("/cert", (request, response) -> {
             response.type("application/x-x509-ca-cert");
-            try(BufferedInputStream input = new BufferedInputStream(new FileInputStream(cert));
-                BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
+            try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(cert));
+                 BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
                 byte[] buffer = new byte[4096];
                 int len;
                 while ((len = input.read(buffer)) > 0) {
-                    output.write(buffer,0,len);
+                    output.write(buffer, 0, len);
                 }
 
                 output.flush();
@@ -51,103 +54,135 @@ public class RecordMockProxyAdmin {
             return response.raw();
         });
         path("/api", () -> {
-           path("/record", () -> {
-               get("", (request, response) -> {
-                   response.type("application/json");
-                   return gson.toJson(record.values());
-               });
-               get("/:id/response", (request, response) -> {
-                   String requestName = decodeRequestName(request.params(":id"));
+            path("/record", () -> {
+                get("", (request, response) -> {
+                    response.type("application/json");
+                    return gson.toJson(record.values());
+                });
+                delete("", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                get("/:id", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                get("/:id/response", (request, response) -> {
+                    String requestName = decodeRequestName(request.params(":id"));
 
-                   logger.info(requestName);
+                    logger.info(requestName);
 
-                   RecordModel recordDto = record.get(requestName);
-                   if (recordDto == null) {
-                       response.status(404);
-                       return "{}";
-                   }
+                    RecordModel recordDto = record.get(requestName);
+                    if (recordDto == null) {
+                        response.status(404);
+                        return "{}";
+                    }
 
-                   String contentType = recordDto.getResponse().getHeaders().get("Content-Type");
-                   response.type(contentType);
+                    String contentType = recordDto.getResponse().getHeaders().get("Content-Type");
+                    response.type(contentType);
 
-                   String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
-                   if (encoding != null && !encoding.isEmpty()) {
-                       response.header("Content-Encoding", encoding);
-                   }
+                    String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
+                    if (encoding != null && !encoding.isEmpty()) {
+                        response.header("Content-Encoding", encoding);
+                    }
 
-                   File bodyFile = new File("record/" + recordDto.getResponse().getBodyfile());
-                   try(BufferedInputStream input = new BufferedInputStream(new FileInputStream(bodyFile));
-                       BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
-                       byte[] buffer = new byte[4096];
-                       int len;
-                       while ((len = input.read(buffer)) > 0) {
-                           output.write(buffer,0,len);
-                       }
+                    File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordDto.getResponse().getBodyfile());
+                    try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(bodyFile));
+                         BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
+                        byte[] buffer = new byte[4096];
+                        int len;
+                        while ((len = input.read(buffer)) > 0) {
+                            output.write(buffer, 0, len);
+                        }
 
-                       output.flush();
-                   }
+                        output.flush();
+                    }
 
-                   return response.raw();
-               });
-           });
-           path("/mock", () -> {
-               get("", (request, response) -> {
-                   response.type("application/json");
-                   return "{}";
-               });
-               post("", (request, response) -> {
-                   MockForm form = gson.fromJson(request.body(), MockForm.class);
+                    return response.raw();
+                });
+                get("/csv", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+            });
+            path("/mock", () -> {
+                get("", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                post("", (request, response) -> {
+                    MockForm form = gson.fromJson(request.body(), MockForm.class);
 
-                   String mockId = Util.getMockId(form);
-                   File mockDir = new File("mock/" + mockId);
-                   if (!mockDir.exists()) {
-                       mockDir.mkdirs();
-                   }
+                    String mockId = Util.getMockId(form);
+                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
+                    if (!targetDir.exists()) {
+                        targetDir.mkdirs();
+                    }
 
-                   if (form.getResponseHeaders() != null) {
-                       File head = new File(mockDir.getAbsolutePath() + "/head");
-                       try(OutputStream headStream = new FileOutputStream(head)) {
-                           StringBuilder b = new StringBuilder();
-                           form.getResponseHeaders().forEach((key, value) -> {
-                               b.append(key + ": " + value + "\r\n");
-                           });
-                       }
-                   }
+                    if (form.getResponseHeaders() != null) {
+                        File head = new File(targetDir.getAbsolutePath() + "/head");
+                        try (OutputStream headStream = new FileOutputStream(head)) {
+                            StringBuilder b = new StringBuilder();
+                            form.getResponseHeaders().forEach((key, value) -> {
+                                b.append(key + ": " + value + "\r\n");
+                            });
+                        }
+                    }
 
-                   File head = new File(mockDir.getAbsolutePath() + "/head");
-                   try(OutputStream headStream = new FileOutputStream(head)) {
-                       headStream.write(("HTTP/1.1 " + form.getResponseStatus() + " " + form.getResponseStatusMessage() + "\r\n").getBytes());
-                       if (form.getResponseHeaders() != null) {
-                           for (String key : form.getResponseHeaders().keySet()) {
-                               String value = form.getResponseHeaders().get(key);
-                               headStream.write((key + ": " + value + "\r\n").getBytes());
-                           }
-                       }
-                       if (form.getResponseType() != null) {
-                           headStream.write(("Content-Type: " + form.getResponseType() + "\r\n").getBytes());
-                       }
-                       headStream.write(("\r\n").getBytes());
-                   }
+                    File head = new File(targetDir.getAbsolutePath() + "/head");
+                    try (OutputStream headStream = new FileOutputStream(head)) {
+                        headStream.write(("HTTP/1.1 " + form.getResponseStatus() + " " + form.getResponseStatusMessage() + "\r\n").getBytes());
+                        if (form.getResponseHeaders() != null) {
+                            for (String key : form.getResponseHeaders().keySet()) {
+                                String value = form.getResponseHeaders().get(key);
+                                headStream.write((key + ": " + value + "\r\n").getBytes());
+                            }
+                        }
+                        if (form.getResponseType() != null) {
+                            headStream.write(("Content-Type: " + form.getResponseType() + "\r\n").getBytes());
+                        }
+                        headStream.write(("\r\n").getBytes());
+                    }
 
-                   if (form.getResponseBody() != null) {
-                       File body = new File(mockDir.getAbsolutePath() + "/body");
-                       try(OutputStream bodyStream = new FileOutputStream(body)) {
-                           bodyStream.write(form.getResponseBody().getBytes());
-                       }
-                   }
+                    if (form.getResponseBody() != null) {
+                        File body = new File(targetDir.getAbsolutePath() + "/body");
+                        try (OutputStream bodyStream = new FileOutputStream(body)) {
+                            bodyStream.write(form.getResponseBody().getBytes());
+                        }
+                    }
 
-                   response.type("application/json");
-                   return "{\"id\":\"" + mockId + "\"}";
-               });
-               put("/:id", (request, response) -> {
-                   response.type("application/json");
-                   return "{}";
-               });
-               post("/:id/body", (request, response) -> {
-                   response.type("application/json");
-                   return "{}";
-               });
-           });
+                    response.type("application/json");
+                    return "{\"id\":\"" + mockId + "\"}";
+                });
+                get("/:targetId", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                delete("/:targetId", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                post("/:targetId", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                get("/:targetId/:responseId", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                delete("/:targetId/:responseId", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                put("/:targetId/rule", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                put("/:targetId/order", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+            });
         });
 
         exception(Exception.class, (exception, request, response) -> {
@@ -171,7 +206,7 @@ public class RecordMockProxyAdmin {
             port = 80;
         }
 
-        RequestModel requestDto = new RequestModel();
+        RecordModel.RequestModel requestDto = new RecordModel.RequestModel();
         requestDto.setHost(request.getUri().getHost());
         requestDto.setPort(port);
         requestDto.setPath(request.getUri().getPath());
@@ -192,7 +227,7 @@ public class RecordMockProxyAdmin {
     public void putResponse(String requestName, String responseName, RawHttpResponse response) {
         RecordModel dto = record.get(requestName);
 
-        ResponseModel responseDto = new ResponseModel();
+        RecordModel.ResponseModel responseDto = new RecordModel.ResponseModel();
         responseDto.setStatusCode(response.getStatusCode());
         responseDto.setHeaders(new HashMap<>());
         response.getHeaders().getHeaderNames().forEach(s -> {
@@ -213,7 +248,8 @@ public class RecordMockProxyAdmin {
 
         try {
             names[2] = new URLCodec().encode(names[2], "UTF-8");
-        } catch (UnsupportedEncodingException e) { }
+        } catch (UnsupportedEncodingException e) {
+        }
 
         return names[0] + "^" + names[1] + "^" + names[2] + "^" + names[3] + "^" + names[4];
     }

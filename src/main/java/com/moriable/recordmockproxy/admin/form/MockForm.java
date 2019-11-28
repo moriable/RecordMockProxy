@@ -15,7 +15,7 @@ public class MockForm {
 
     private int responseStatus;
     private String responseStatusMessage;
-    private Map<String, String> responseHeaders;
     private String responseType;
+    private Map<String, String> responseHeaders;
     private String responseBody;
 }

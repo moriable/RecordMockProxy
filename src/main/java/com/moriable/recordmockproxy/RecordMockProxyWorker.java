@@ -28,16 +28,20 @@ public class RecordMockProxyWorker implements Runnable {
     private RecordMockProxy serverRef;
     private RawHttp http;
     private RecordMockProxyAdmin admin;
+    private File recordDir;
+    private File mockDir;
 
     protected RecordMockProxyWorker(Socket socket) {
         this.socket = socket;
         this.isSSL = socket instanceof SSLSocket;
     }
 
-    protected void init(RecordMockProxy server, RawHttp http, RecordMockProxyAdmin admin) {
+    protected void init(RecordMockProxy server, RawHttp http, RecordMockProxyAdmin admin, File recordDir, File mockDir) {
         this.serverRef = server;
         this.http = http;
         this.admin = admin;
+        this.recordDir = recordDir;
+        this.mockDir = mockDir;
     }
 
     @Override
@@ -109,10 +113,10 @@ public class RecordMockProxyWorker implements Runnable {
 
         RawHttpResponse response = null;
         String mockId = Util.getMockId(request, port);
-        File mockDir = new File("mock/" + mockId);
+        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
         logger.info(mockId);
-        if (mockDir.exists()) {
-            response = responseMock(mockDir);
+        if (targetDir.exists()) {
+            response = responseMock(targetDir);
         }
 
         Socket relaysocket = null;
@@ -124,7 +128,7 @@ public class RecordMockProxyWorker implements Runnable {
             }
 
             if (request.getBody().isPresent()) {
-                File requestFile = new File("record/" + requestName);
+                File requestFile = new File(recordDir.getAbsolutePath() + File.separator + requestName);
                 requestFile.createNewFile();
                 try (FileOutputStream requestStrema = new FileOutputStream(requestFile)) {
                     request.writeTo(new OutputStream[]{relaysocket.getOutputStream(), requestStrema}, 8192);
@@ -144,7 +148,7 @@ public class RecordMockProxyWorker implements Runnable {
         String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType + "^" + (new Date().getTime() - requestDate.getTime());
 
         if (!socket.isClosed()) {
-            File responseFile = new File("record/" + responseName);
+            File responseFile = new File(recordDir.getAbsolutePath() + File.separator + responseName);
             responseFile.createNewFile();
             try(FileOutputStream responseStream = new FileOutputStream(responseFile)) {
                 response.writeTo(new OutputStream[]{socket.getOutputStream(), responseStream}, 8192);

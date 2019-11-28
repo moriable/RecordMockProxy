@@ -9,8 +9,9 @@ import java.util.Map;
 public class MockModel {
 
     private TragetModel target;
-    private List<ResponseModel> mockResponses;
+    private List<MockResponseModel> mockResponses;
     private MockRule rule;
+    private int callCount;
 
     @Data
     public static class TragetModel {
@@ -20,6 +21,15 @@ public class MockModel {
         private int port;
         private String path;
         private String query;
+    }
+
+    @Data
+    public static class MockResponseModel {
+        private String id;
+        private boolean enable;
+        private int statusCode;
+        private String statusMessage;
+        private Map<String, String> headers;
     }
 
     public enum MockRule {

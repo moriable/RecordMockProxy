@@ -2,8 +2,10 @@ package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
 import org.apache.commons.cli.*;
+import org.apache.commons.io.FileUtils;
 import rawhttp.core.RawHttp;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -25,10 +27,24 @@ public class RecordMockProxy {
 
     private RecordMockProxyAdmin admin;
 
+    private File recordDir;
+    private File mockDir;
+
     public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath, int adminPort) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
+        recordDir = new File("record");
+        FileUtils.deleteDirectory(recordDir);
+        recordDir.mkdirs();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(recordDir)));
+        System.out.println(recordDir.getAbsolutePath());
+
+        mockDir = new File("mock");
+        if (!mockDir.exists()) {
+            mockDir.mkdirs();
+        }
+
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
-        admin = new RecordMockProxyAdmin(adminPort, caCertPath);
+        admin = new RecordMockProxyAdmin(adminPort, caCertPath, recordDir, mockDir);
     }
 
     public static void main(String[] args) throws Exception {
@@ -115,7 +131,7 @@ public class RecordMockProxy {
     }
 
     protected void submitWorker(RecordMockProxyWorker worker) {
-        worker.init(this, http, admin);
+        worker.init(this, http, admin, recordDir, mockDir);
         execService.submit(worker);
     }
 }
