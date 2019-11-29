@@ -1,10 +1,12 @@
-package com.moriable.recordmockproxy.common;
+package com.moriable.recordmockproxy.model;
+
+import com.moriable.recordmockproxy.common.Exclude;
 
 import java.io.Serializable;
 import java.util.Map;
 
 @Exclude
-public abstract class Model implements Serializable {
+public abstract class AbstractModel implements Serializable {
 
     @Exclude
     private Map storage;
@@ -17,7 +19,7 @@ public abstract class Model implements Serializable {
         this.key = key;
     }
 
-    public final boolean hasStorage() {
+    public final boolean registeredStorage() {
         return storage != null;
     }
 

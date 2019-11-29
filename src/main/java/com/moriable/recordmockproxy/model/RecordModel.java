@@ -1,4 +1,4 @@
-package com.moriable.recordmockproxy.admin.model;
+package com.moriable.recordmockproxy.model;
 
 import lombok.Data;
 

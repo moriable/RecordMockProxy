@@ -1,8 +1,9 @@
-package com.moriable.recordmockproxy.common;
+package com.moriable.recordmockproxy.model;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.moriable.recordmockproxy.common.ExcludeWithAnotateStrategy;
 import org.apache.commons.lang.SerializationUtils;
 
 import java.io.*;
@@ -11,13 +12,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class Storage<K,V extends Model> {
+public class ModelStorage<K,V extends AbstractModel> {
 
     private File storageFile;
     private Map<K,V> storage = null;
     private Gson gson = new GsonBuilder().addSerializationExclusionStrategy( new ExcludeWithAnotateStrategy() ).create();
 
-    public Storage(File storageFile) {
+    public ModelStorage(File storageFile) {
         this.storageFile = storageFile;
         if (storageFile.exists()) {
             if (!storageFile.isFile()) {
@@ -48,7 +49,7 @@ public class Storage<K,V extends Model> {
     }
 
     public void put(K key, V value) {
-        if (value.hasStorage()) {
+        if (value.registeredStorage()) {
             throw new IllegalStateException("This value is already put. Use commit method to reflect changes.");
         }
 

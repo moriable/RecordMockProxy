@@ -1,23 +1,19 @@
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.moriable.recordmockproxy.admin.model.MockModel;
-import com.moriable.recordmockproxy.common.Exclude;
-import com.moriable.recordmockproxy.common.Model;
-import com.moriable.recordmockproxy.common.Storage;
+import com.moriable.recordmockproxy.model.AbstractModel;
+import com.moriable.recordmockproxy.model.ModelStorage;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.apache.commons.codec.net.URLCodec;
 
 import java.io.File;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.util.*;
 
 public class Test {
     public static void main(String[] args) throws CloneNotSupportedException {
-        Storage<String, TestModel> storage = new Storage<>(new File("/Users/hiroki.nakamori/tmp/test.json"));
+        ModelStorage<String, TestModel> storage = new ModelStorage<>(new File("/Users/hiroki.nakamori/tmp/test.json"));
 
         TestModel model1 = new TestModel();
         model1.setName("tanaka");
@@ -80,7 +76,7 @@ public class Test {
 
     @Data
     @EqualsAndHashCode(callSuper=true)
-    public static class TestModel extends Model {
+    public static class TestModel extends AbstractModel {
         private String name;
         private int age;
         private Child child;
