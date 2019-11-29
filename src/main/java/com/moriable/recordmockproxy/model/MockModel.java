@@ -1,11 +1,15 @@
 package com.moriable.recordmockproxy.model;
 
+import com.moriable.recordmockproxy.admin.form.MockForm;
+import com.moriable.recordmockproxy.common.Util;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Data
 @EqualsAndHashCode(callSuper=false)
@@ -14,7 +18,6 @@ public class MockModel extends AbstractModel {
     private TargetModel target;
     private List<MockResponseModel> mockResponses;
     private MockRule rule;
-    private int callCount;
 
     @Data
     public static class TargetModel implements Serializable {
@@ -40,5 +43,32 @@ public class MockModel extends AbstractModel {
         ONCE,
         REPEAT,
         RANDOM
+    }
+
+    public MockModel() {
+    }
+
+    public MockModel(MockForm form) {
+        target = new TargetModel();
+        target.id = Util.getMockId(form);
+        target.setMethod(form.getMethod());
+        target.setHost(form.getHost());
+        target.setPort(form.getPort());
+        target.setPath(form.getPath());
+        target.setQuery(form.getQuery());
+
+        mockResponses = new ArrayList<>();
+
+        if (form.getResponseBody() != null) {
+            MockResponseModel response = new MockResponseModel();
+            response.id = Util.getHash(UUID.randomUUID().toString());
+            response.enable = true;
+            response.setStatusCode(form.getResponseStatus());
+            response.setStatusMessage(form.getResponseStatusMessage());
+            response.setHeaders(form.getResponseHeaders());
+            mockResponses.add(response);
+        }
+
+        rule = MockRule.valueOf(form.getRule());
     }
 }

@@ -1,8 +1,9 @@
 package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.moriable.recordmockproxy.admin.form.MockForm;
-import com.moriable.recordmockproxy.common.Util;
+import com.moriable.recordmockproxy.common.ExcludeWithAnotateStrategy;
 import com.moriable.recordmockproxy.model.MockModel;
 import com.moriable.recordmockproxy.model.ModelStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
@@ -39,7 +40,7 @@ public class RecordMockProxyAdmin {
     }
 
     public void start() {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExcludeWithAnotateStrategy()).create();
 
         port(port);
         get("/cert", (request, response) -> {
@@ -115,48 +116,29 @@ public class RecordMockProxyAdmin {
                     return null;
                 });
                 post("", (request, response) -> {
+
                     MockForm form = gson.fromJson(request.body(), MockForm.class);
 
-                    String mockId = Util.getMockId(form);
-                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
+                    MockModel model = new MockModel(form);
+
+                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
                     if (!targetDir.exists()) {
                         targetDir.mkdirs();
                     }
 
-                    if (form.getResponseHeaders() != null) {
-                        File head = new File(targetDir.getAbsolutePath() + "/head");
-                        try (OutputStream headStream = new FileOutputStream(head)) {
-                            StringBuilder b = new StringBuilder();
-                            form.getResponseHeaders().forEach((key, value) -> {
-                                b.append(key + ": " + value + "\r\n");
-                            });
-                        }
-                    }
-
-                    File head = new File(targetDir.getAbsolutePath() + "/head");
-                    try (OutputStream headStream = new FileOutputStream(head)) {
-                        headStream.write(("HTTP/1.1 " + form.getResponseStatus() + " " + form.getResponseStatusMessage() + "\r\n").getBytes());
-                        if (form.getResponseHeaders() != null) {
-                            for (String key : form.getResponseHeaders().keySet()) {
-                                String value = form.getResponseHeaders().get(key);
-                                headStream.write((key + ": " + value + "\r\n").getBytes());
-                            }
-                        }
-                        if (form.getResponseType() != null) {
-                            headStream.write(("Content-Type: " + form.getResponseType() + "\r\n").getBytes());
-                        }
-                        headStream.write(("\r\n").getBytes());
-                    }
-
                     if (form.getResponseBody() != null) {
-                        File body = new File(targetDir.getAbsolutePath() + "/body");
+                        String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
+                        File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
                         try (OutputStream bodyStream = new FileOutputStream(body)) {
                             bodyStream.write(form.getResponseBody().getBytes());
                         }
                     }
 
+                    mockStorage.put(model.getTarget().getId(), model);
+                    mockStorage.save();
+
                     response.type("application/json");
-                    return "{\"id\":\"" + mockId + "\"}";
+                    return gson.toJson(model);
                 });
                 get("/:targetId", (request, response) -> {
                     // TODO

@@ -13,6 +13,8 @@ public class MockForm {
     private String path;
     private String query;
 
+    private String rule;
+
     private int responseStatus;
     private String responseStatusMessage;
     private String responseType;
