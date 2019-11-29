@@ -117,6 +117,7 @@ public class RecordMockProxyAdmin {
                     return null;
                 });
                 post("", (request, response) -> {
+                    // TODO multipart/form-data
                     MockForm form = gson.fromJson(request.body(), MockForm.class);
 
                     MockModel model = new MockModel(form);
