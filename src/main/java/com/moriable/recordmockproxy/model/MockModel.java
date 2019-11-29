@@ -58,16 +58,13 @@ public class MockModel extends AbstractModel {
         target.setQuery(form.getQuery());
 
         mockResponses = new ArrayList<>();
-
-        if (form.getResponseBody() != null) {
-            MockResponseModel response = new MockResponseModel();
-            response.id = Util.getHash(UUID.randomUUID().toString());
-            response.enable = true;
-            response.setStatusCode(form.getResponseStatus());
-            response.setStatusMessage(form.getResponseStatusMessage());
-            response.setHeaders(form.getResponseHeaders());
-            mockResponses.add(response);
-        }
+        MockResponseModel response = new MockResponseModel();
+        response.id = Util.getHash(UUID.randomUUID().toString());
+        response.enable = true;
+        response.setStatusCode(form.getResponseStatus());
+        response.setStatusMessage(form.getResponseStatusMessage());
+        response.setHeaders(form.getResponseHeaders());
+        mockResponses.add(response);
 
         rule = MockRule.valueOf(form.getRule());
     }

@@ -8,6 +8,7 @@ import com.moriable.recordmockproxy.model.MockModel;
 import com.moriable.recordmockproxy.model.ModelStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.util.Map;
@@ -116,22 +117,20 @@ public class RecordMockProxyAdmin {
                     return null;
                 });
                 post("", (request, response) -> {
-
                     MockForm form = gson.fromJson(request.body(), MockForm.class);
 
                     MockModel model = new MockModel(form);
 
                     File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
-                    if (!targetDir.exists()) {
-                        targetDir.mkdirs();
+                    if (targetDir.exists()) {
+                        FileUtils.deleteDirectory(targetDir);
                     }
+                    targetDir.mkdirs();
 
-                    if (form.getResponseBody() != null) {
-                        String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
-                        File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
-                        try (OutputStream bodyStream = new FileOutputStream(body)) {
-                            bodyStream.write(form.getResponseBody().getBytes());
-                        }
+                    String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
+                    File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
+                    try (OutputStream bodyStream = new FileOutputStream(body)) {
+                        bodyStream.write(form.getResponseBody().getBytes());
                     }
 
                     mockStorage.put(model.getTarget().getId(), model);
