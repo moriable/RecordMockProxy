@@ -1,12 +1,14 @@
 package com.moriable.recordmockproxy.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.Map;
 
 @Data
-public class RecordModel implements Serializable {
+@EqualsAndHashCode(callSuper=false)
+public class RecordModel extends AbstractModel {
     private String id;
     private long date;
     private RequestModel request;

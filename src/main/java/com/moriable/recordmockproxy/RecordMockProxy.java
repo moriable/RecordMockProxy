@@ -1,6 +1,9 @@
 package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
+import com.moriable.recordmockproxy.model.MockModel;
+import com.moriable.recordmockproxy.model.ModelStorage;
+import com.moriable.recordmockproxy.model.RecordModel;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
 import rawhttp.core.RawHttp;
@@ -13,24 +16,31 @@ import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class RecordMockProxy {
     private ExecutorService execService = Executors.newFixedThreadPool(4);
 
+    private File recordDir;
+
+    private File mockDir;
+
     private InetSocketAddress serverAddress;
 
-    private boolean loop = true;
-
     private RawHttp http = new RawHttp();
+    private Map<String, RecordModel> recordMap;
+    private ModelStorage<String, MockModel> mockStorage;
 
     private RecordMockProxyAdmin admin;
 
-    private File recordDir;
-    private File mockDir;
+    private boolean loop = true;
 
     public RecordMockProxy(InetSocketAddress serverAddress, String caCertPath, String caPrivateKeyPath, int adminPort) throws InvalidKeySpecException, CertificateException, NoSuchAlgorithmException, IOException {
+
         recordDir = new File("record");
         FileUtils.deleteDirectory(recordDir);
         recordDir.mkdirs();
@@ -42,9 +52,12 @@ public class RecordMockProxy {
             mockDir.mkdirs();
         }
 
+        recordMap = Collections.synchronizedMap(new LinkedHashMap<>());
+        mockStorage = new ModelStorage<>(new File(mockDir + File.separator + "mock.json"));
+
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
-        admin = new RecordMockProxyAdmin(adminPort, caCertPath, recordDir, mockDir);
+        admin = new RecordMockProxyAdmin(adminPort, caCertPath, recordMap, recordDir, mockStorage, mockDir);
     }
 
     public static void main(String[] args) throws Exception {
@@ -128,10 +141,11 @@ public class RecordMockProxy {
 
     public void stop() {
         this.loop = false;
+        admin.stop();
     }
 
     protected void submitWorker(RecordMockProxyWorker worker) {
-        worker.init(this, http, admin, recordDir, mockDir);
+        worker.init(this, http, recordMap, recordDir, mockStorage, mockDir);
         execService.submit(worker);
     }
 }

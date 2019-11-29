@@ -16,9 +16,13 @@ public class ModelStorage<K,V extends AbstractModel> {
 
     private File storageFile;
     private Map<K,V> storage = null;
-    private Gson gson = new GsonBuilder().addSerializationExclusionStrategy( new ExcludeWithAnotateStrategy() ).create();
+    private Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExcludeWithAnotateStrategy()).create();
 
     public ModelStorage(File storageFile) {
+        if (storageFile == null) {
+            throw new IllegalArgumentException();
+        }
+
         this.storageFile = storageFile;
         if (storageFile.exists()) {
             if (!storageFile.isFile()) {

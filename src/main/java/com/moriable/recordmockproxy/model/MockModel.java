@@ -1,20 +1,23 @@
 package com.moriable.recordmockproxy.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
 @Data
-public class MockModel {
+@EqualsAndHashCode(callSuper=false)
+public class MockModel extends AbstractModel {
 
-    private TragetModel target;
+    private TargetModel target;
     private List<MockResponseModel> mockResponses;
     private MockRule rule;
     private int callCount;
 
     @Data
-    public static class TragetModel {
+    public static class TargetModel implements Serializable {
         private String id;
         private String method;
         private String host;
@@ -24,7 +27,7 @@ public class MockModel {
     }
 
     @Data
-    public static class MockResponseModel {
+    public static class MockResponseModel implements Serializable {
         private String id;
         private boolean enable;
         private int statusCode;

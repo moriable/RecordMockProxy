@@ -1,7 +1,9 @@
 package com.moriable.recordmockproxy;
 
-import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
 import com.moriable.recordmockproxy.common.Util;
+import com.moriable.recordmockproxy.model.MockModel;
+import com.moriable.recordmockproxy.model.ModelStorage;
+import com.moriable.recordmockproxy.model.RecordModel;
 import rawhttp.core.RawHttp;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
@@ -16,6 +18,8 @@ import java.net.Socket;
 import java.net.URISyntaxException;
 import java.security.KeyStore;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,21 +31,24 @@ public class RecordMockProxyWorker implements Runnable {
 
     private RecordMockProxy serverRef;
     private RawHttp http;
-    private RecordMockProxyAdmin admin;
     private File recordDir;
     private File mockDir;
+    private Map<String, RecordModel> recordMap;
+    private ModelStorage<String, MockModel> mockStorage;
 
     protected RecordMockProxyWorker(Socket socket) {
         this.socket = socket;
         this.isSSL = socket instanceof SSLSocket;
     }
 
-    protected void init(RecordMockProxy server, RawHttp http, RecordMockProxyAdmin admin, File recordDir, File mockDir) {
+    protected void init(RecordMockProxy server, RawHttp http, Map<String, RecordModel> recordMap, File recordDir,
+                         ModelStorage<String, MockModel> mockStorage, File mockDir) {
         this.serverRef = server;
         this.http = http;
-        this.admin = admin;
         this.recordDir = recordDir;
         this.mockDir = mockDir;
+        this.recordMap = recordMap;
+        this.mockStorage = mockStorage;
     }
 
     @Override
@@ -108,7 +115,7 @@ public class RecordMockProxyWorker implements Runnable {
 
         String requestName = Util.getRequestName(request, requestDate, port);
 
-        admin.putRequest(requestName, requestDate, request, isSSL);
+        putRequest(requestName, requestDate, request, isSSL);
         logger.info(requestName);
 
         RawHttpResponse response = null;
@@ -158,11 +165,55 @@ public class RecordMockProxyWorker implements Runnable {
             logger.warning("client socket closed");
         }
 
-        admin.putResponse(requestName, responseName, response);
+        putResponse(requestName, responseName, response);
 
         if (relaysocket != null) {
             relaysocket.close();
         }
+    }
+
+    public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
+        RecordModel dto = new RecordModel();
+        dto.setId(requestName);
+        dto.setDate(date.getTime());
+
+        int port = request.getUri().getPort();
+        if (port == -1 && isSSL) {
+            port = 443;
+        } else if (port == -1 && !isSSL) {
+            port = 80;
+        }
+
+        RecordModel.RequestModel requestDto = new RecordModel.RequestModel();
+        requestDto.setHost(request.getUri().getHost());
+        requestDto.setPort(port);
+        requestDto.setPath(request.getUri().getPath());
+        requestDto.setQuery(request.getUri().getQuery());
+        requestDto.setHeaders(new HashMap<>());
+        request.getHeaders().getHeaderNames().forEach(s -> {
+            requestDto.getHeaders().put(s, request.getHeaders().get(s).get(0));
+        });
+        if (request.getBody().isPresent()) {
+            requestDto.setBodyfile(requestName);
+        }
+
+        dto.setRequest(requestDto);
+
+        recordMap.put(requestName, dto);
+    }
+
+    public void putResponse(String requestName, String responseName, RawHttpResponse response) {
+        RecordModel dto = recordMap.get(requestName);
+
+        RecordModel.ResponseModel responseDto = new RecordModel.ResponseModel();
+        responseDto.setStatusCode(response.getStatusCode());
+        responseDto.setHeaders(new HashMap<>());
+        response.getHeaders().getHeaderNames().forEach(s -> {
+            responseDto.getHeaders().put(s, response.getHeaders().get(s).get(0));
+        });
+        responseDto.setBodyfile(responseName);
+
+        dto.setResponse(responseDto);
     }
 
     private RawHttpResponse responseMock(File mockDir) {

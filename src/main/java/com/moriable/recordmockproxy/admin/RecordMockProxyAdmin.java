@@ -2,14 +2,14 @@ package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
 import com.moriable.recordmockproxy.admin.form.MockForm;
-import com.moriable.recordmockproxy.model.RecordModel;
 import com.moriable.recordmockproxy.common.Util;
+import com.moriable.recordmockproxy.model.MockModel;
+import com.moriable.recordmockproxy.model.ModelStorage;
+import com.moriable.recordmockproxy.model.RecordModel;
 import org.apache.commons.codec.net.URLCodec;
-import rawhttp.core.RawHttpRequest;
-import rawhttp.core.RawHttpResponse;
 
 import java.io.*;
-import java.util.*;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,18 +19,23 @@ public class RecordMockProxyAdmin {
 
     private final Logger logger = Logger.getLogger(RecordMockProxyAdmin.class.getSimpleName());
 
-    Map<String, RecordModel> record = Collections.synchronizedMap(new LinkedHashMap<>());
+    Map<String, RecordModel> recordMap;
+    ModelStorage<String, MockModel> mockStorage;
 
     private int port;
     private String cert;
     private File recordDir;
     private File mockDir;
 
-    public RecordMockProxyAdmin(int adminPort, String cert, File recordDir, File mockDir) {
+    public RecordMockProxyAdmin(int adminPort, String cert, Map<String, RecordModel> recordMap, File recordDir,
+                                ModelStorage<String, MockModel> mockStorage, File mockDir) {
         this.port = adminPort;
         this.cert = cert;
         this.recordDir = recordDir;
         this.mockDir = mockDir;
+
+        this.recordMap = recordMap;
+        this.mockStorage = mockStorage;
     }
 
     public void start() {
@@ -56,7 +61,7 @@ public class RecordMockProxyAdmin {
             path("/record", () -> {
                 get("", (request, response) -> {
                     response.type("application/json");
-                    return gson.toJson(record.values());
+                    return gson.toJson(recordMap.values());
                 });
                 delete("", (request, response) -> {
                     // TODO
@@ -71,7 +76,7 @@ public class RecordMockProxyAdmin {
 
                     logger.info(requestName);
 
-                    RecordModel recordDto = record.get(requestName);
+                    RecordModel recordDto = recordMap.get(requestName);
                     if (recordDto == null) {
                         response.status(404);
                         return "{}";
@@ -191,50 +196,6 @@ public class RecordMockProxyAdmin {
 
     public void stop() {
         stop();
-    }
-
-    public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
-        RecordModel dto = new RecordModel();
-        dto.setId(requestName);
-        dto.setDate(date.getTime());
-
-        int port = request.getUri().getPort();
-        if (port == -1 && isSSL) {
-            port = 443;
-        } else if (port == -1 && !isSSL) {
-            port = 80;
-        }
-
-        RecordModel.RequestModel requestDto = new RecordModel.RequestModel();
-        requestDto.setHost(request.getUri().getHost());
-        requestDto.setPort(port);
-        requestDto.setPath(request.getUri().getPath());
-        requestDto.setQuery(request.getUri().getQuery());
-        requestDto.setHeaders(new HashMap<>());
-        request.getHeaders().getHeaderNames().forEach(s -> {
-            requestDto.getHeaders().put(s, request.getHeaders().get(s).get(0));
-        });
-        if (request.getBody().isPresent()) {
-            requestDto.setBodyfile(requestName);
-        }
-
-        dto.setRequest(requestDto);
-
-        record.put(requestName, dto);
-    }
-
-    public void putResponse(String requestName, String responseName, RawHttpResponse response) {
-        RecordModel dto = record.get(requestName);
-
-        RecordModel.ResponseModel responseDto = new RecordModel.ResponseModel();
-        responseDto.setStatusCode(response.getStatusCode());
-        responseDto.setHeaders(new HashMap<>());
-        response.getHeaders().getHeaderNames().forEach(s -> {
-            responseDto.getHeaders().put(s, response.getHeaders().get(s).get(0));
-        });
-        responseDto.setBodyfile(responseName);
-
-        dto.setResponse(responseDto);
     }
 
     private String decodeRequestName(String requestName) {
