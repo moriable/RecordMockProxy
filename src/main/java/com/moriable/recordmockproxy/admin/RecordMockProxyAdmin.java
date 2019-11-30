@@ -9,7 +9,11 @@ import com.moriable.recordmockproxy.model.ModelStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.io.FileUtils;
+import spark.Request;
 
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletException;
+import javax.servlet.http.Part;
 import java.io.*;
 import java.util.Map;
 import java.util.logging.Level;
@@ -25,11 +29,11 @@ public class RecordMockProxyAdmin {
     ModelStorage<String, MockModel> mockStorage;
 
     private int port;
-    private String cert;
+    private File cert;
     private File recordDir;
     private File mockDir;
 
-    public RecordMockProxyAdmin(int adminPort, String cert, Map<String, RecordModel> recordMap, File recordDir,
+    public RecordMockProxyAdmin(int adminPort, File cert, Map<String, RecordModel> recordMap, File recordDir,
                                 ModelStorage<String, MockModel> mockStorage, File mockDir) {
         this.port = adminPort;
         this.cert = cert;
@@ -46,25 +50,12 @@ public class RecordMockProxyAdmin {
         port(port);
         get("/cert", (request, response) -> {
             response.type("application/x-x509-ca-cert");
-            try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(cert));
-                 BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
-                byte[] buffer = new byte[4096];
-                int len;
-                while ((len = input.read(buffer)) > 0) {
-                    output.write(buffer, 0, len);
-                }
-
-                output.flush();
-            }
-
+            responseFile(cert, response.raw().getOutputStream());
             return response.raw();
         });
         path("/api", () -> {
             path("/record", () -> {
-                get("", (request, response) -> {
-                    response.type("application/json");
-                    return gson.toJson(recordMap.values());
-                });
+                get("", (request, response) -> recordMap.values(), gson::toJson);
                 delete("", (request, response) -> {
                     // TODO
                     return null;
@@ -75,8 +66,6 @@ public class RecordMockProxyAdmin {
                 });
                 get("/:id/response", (request, response) -> {
                     String requestName = decodeRequestName(request.params(":id"));
-
-                    logger.info(requestName);
 
                     RecordModel recordDto = recordMap.get(requestName);
                     if (recordDto == null) {
@@ -93,17 +82,7 @@ public class RecordMockProxyAdmin {
                     }
 
                     File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordDto.getResponse().getBodyfile());
-                    try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(bodyFile));
-                         BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
-                        byte[] buffer = new byte[4096];
-                        int len;
-                        while ((len = input.read(buffer)) > 0) {
-                            output.write(buffer, 0, len);
-                        }
-
-                        output.flush();
-                    }
-
+                    responseFile(bodyFile, response.raw().getOutputStream());
                     return response.raw();
                 });
                 get("/csv", (request, response) -> {
@@ -116,8 +95,7 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                post("", (request, response) -> {
-                    // TODO multipart/form-data
+                post("", "application/json", (request, response) -> {
                     MockForm form = gson.fromJson(request.body(), MockForm.class);
 
                     MockModel model = new MockModel(form);
@@ -140,6 +118,29 @@ public class RecordMockProxyAdmin {
                     response.type("application/json");
                     return gson.toJson(model);
                 });
+                post("","multipart/form-data", (request, response) -> {
+                    request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+
+                    String json = getFormdataString(request, "mock");
+                    MockForm form = gson.fromJson(json, MockForm.class);
+                    MockModel model = new MockModel(form);
+
+                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
+                    if (targetDir.exists()) {
+                        FileUtils.deleteDirectory(targetDir);
+                    }
+                    targetDir.mkdirs();
+
+                    String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
+                    File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + filename);
+                    pipe(request.raw().getPart("responseBody").getInputStream(), new FileOutputStream(bodyFile));
+
+                    mockStorage.put(model.getTarget().getId(), model);
+                    mockStorage.save();
+
+                    response.type("application/json");
+                    return gson.toJson(form);
+                });
                 get("/:targetId", (request, response) -> {
                     // TODO
                     return null;
@@ -148,7 +149,11 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                post("/:targetId", (request, response) -> {
+                post("/:targetId", "application/json", (request, response) -> {
+                    // TODO
+                    return null;
+                });
+                post("/:targetId", "multipart/form-data", (request, response) -> {
                     // TODO
                     return null;
                 });
@@ -160,11 +165,11 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                put("/:targetId/rule", (request, response) -> {
+                put("/:targetId/rule", "application/json", (request, response) -> {
                     // TODO
                     return null;
                 });
-                put("/:targetId/order", (request, response) -> {
+                put("/:targetId/order", "application/json", (request, response) -> {
                     // TODO
                     return null;
                 });
@@ -196,4 +201,51 @@ public class RecordMockProxyAdmin {
         return names[0] + "^" + names[1] + "^" + names[2] + "^" + names[3] + "^" + names[4];
     }
 
+    private void responseFile(File file, OutputStream os) throws IOException {
+        pipe(new FileInputStream(file), os);
+    }
+
+    private String getFormdataString(Request request, String name, String defaultValue) throws ServletException, IOException {
+        String result = getFormdataString(request, name);
+        if (result == null) {
+            return defaultValue;
+        }
+        return result;
+    }
+
+    private String getFormdataString(Request request, String name) throws ServletException, IOException {
+        Part part = request.raw().getPart(name);
+        if (part == null) {
+            return null;
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        pipe(part.getInputStream(), out);
+
+        return out.toString();
+    }
+
+    private int getFormdataInt(Request request, String name, int defaultValue) throws ServletException, IOException {
+        try {
+            return getFormdataInt(request, name);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private int getFormdataInt(Request request, String name) throws ServletException, IOException {
+        String data = getFormdataString(request, name);
+        return Integer.parseInt(data);
+    }
+
+    private void pipe(InputStream input, OutputStream out) throws IOException {
+        try (BufferedInputStream is = new BufferedInputStream(input);
+             BufferedOutputStream os = new BufferedOutputStream(out)) {
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = is.read(buffer)) > 0) {
+                os.write(buffer, 0, len);
+            }
+            os.flush();
+        }
+    }
 }

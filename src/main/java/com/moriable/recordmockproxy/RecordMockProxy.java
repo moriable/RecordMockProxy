@@ -57,7 +57,7 @@ public class RecordMockProxy {
 
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
-        admin = new RecordMockProxyAdmin(adminPort, caCertPath, recordMap, recordDir, mockStorage, mockDir);
+        admin = new RecordMockProxyAdmin(adminPort, new File(caCertPath), recordMap, recordDir, mockStorage, mockDir);
     }
 
     public static void main(String[] args) throws Exception {
