@@ -64,10 +64,10 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                get("/:id/response", (request, response) -> {
-                    String requestName = decodeRequestName(request.params(":id"));
+                get("/:recordId/response", (request, response) -> {
+                    String recordId = encodeRequestName(request.params(":recordId"));
 
-                    RecordModel recordDto = recordMap.get(requestName);
+                    RecordModel recordDto = recordMap.get(recordId);
                     if (recordDto == null) {
                         response.status(404);
                         return "{}";
@@ -95,51 +95,55 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                post("", "application/json", (request, response) -> {
-                    MockForm form = gson.fromJson(request.body(), MockForm.class);
+                post("", (request, response) -> {
+                    if (request.contentType().startsWith("application/json")) {
+                        MockForm form = gson.fromJson(request.body(), MockForm.class);
 
-                    MockModel model = new MockModel(form);
+                        MockModel model = new MockModel(form);
 
-                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
-                    if (targetDir.exists()) {
-                        FileUtils.deleteDirectory(targetDir);
+                        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
+                        if (targetDir.exists()) {
+                            FileUtils.deleteDirectory(targetDir);
+                        }
+                        targetDir.mkdirs();
+
+                        String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
+                        File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
+                        try (OutputStream bodyStream = new FileOutputStream(body)) {
+                            bodyStream.write(form.getResponse().getTextBody().getBytes());
+                        }
+
+                        mockStorage.put(model.getTarget().getId(), model);
+                        mockStorage.save();
+
+                        response.type("application/json");
+                        return gson.toJson(model);
+                    } else if (request.contentType().startsWith("multipart/form-data")) {
+                        request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+
+                        String json = getFormdataString(request, "mock");
+                        MockForm form = gson.fromJson(json, MockForm.class);
+                        MockModel model = new MockModel(form);
+
+                        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
+                        if (targetDir.exists()) {
+                            FileUtils.deleteDirectory(targetDir);
+                        }
+                        targetDir.mkdirs();
+
+                        String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
+                        File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + filename);
+                        pipe(request.raw().getPart("responseBody").getInputStream(), new FileOutputStream(bodyFile));
+
+                        mockStorage.put(model.getTarget().getId(), model);
+                        mockStorage.save();
+
+                        response.type("application/json");
+                        return gson.toJson(model);
                     }
-                    targetDir.mkdirs();
 
-                    String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
-                    File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
-                    try (OutputStream bodyStream = new FileOutputStream(body)) {
-                        bodyStream.write(form.getResponseBody().getBytes());
-                    }
-
-                    mockStorage.put(model.getTarget().getId(), model);
-                    mockStorage.save();
-
-                    response.type("application/json");
-                    return gson.toJson(model);
-                });
-                post("","multipart/form-data", (request, response) -> {
-                    request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
-
-                    String json = getFormdataString(request, "mock");
-                    MockForm form = gson.fromJson(json, MockForm.class);
-                    MockModel model = new MockModel(form);
-
-                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());
-                    if (targetDir.exists()) {
-                        FileUtils.deleteDirectory(targetDir);
-                    }
-                    targetDir.mkdirs();
-
-                    String filename = String.format("%04d.%s", 0, model.getMockResponses().get(0).getId());
-                    File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + filename);
-                    pipe(request.raw().getPart("responseBody").getInputStream(), new FileOutputStream(bodyFile));
-
-                    mockStorage.put(model.getTarget().getId(), model);
-                    mockStorage.save();
-
-                    response.type("application/json");
-                    return gson.toJson(form);
+                    halt(400);
+                    return "";
                 });
                 get("/:targetId", (request, response) -> {
                     // TODO
@@ -149,13 +153,34 @@ public class RecordMockProxyAdmin {
                     // TODO
                     return null;
                 });
-                post("/:targetId", "application/json", (request, response) -> {
-                    // TODO
-                    return null;
-                });
-                post("/:targetId", "multipart/form-data", (request, response) -> {
-                    // TODO
-                    return null;
+                post("/:targetId", (request, response) -> {
+                    String targetId = encodeMockId(request.params(":targetId"));
+
+                    File targetDir = new File(mockDir.getAbsolutePath() + File.separator + targetId);
+                    System.out.println(targetDir.getAbsolutePath());
+                    if (!targetDir.exists()) {
+                        response.status(404);
+                        response.type("application/json");
+                        return "{}";
+                    }
+
+                    MockForm.MockResponseForm form = gson.fromJson(request.body(), MockForm.MockResponseForm.class);
+                    MockModel.MockResponseModel responseModel = new MockModel.MockResponseModel(form);
+
+                    MockModel model = mockStorage.get(targetId);
+                    model.getMockResponses().add(responseModel);
+
+                    String filename = String.format("%04d.%s", model.getMockResponses().size(), responseModel.getId());
+                    File body = new File(targetDir.getAbsolutePath() + File.separator + filename);
+                    try (OutputStream bodyStream = new FileOutputStream(body)) {
+                        bodyStream.write(form.getTextBody().getBytes());
+                    }
+
+                    model.commit();
+                    mockStorage.save();
+
+                    response.type("application/json");
+                    return gson.toJson(model);
                 });
                 get("/:targetId/:responseId", (request, response) -> {
                     // TODO
@@ -185,7 +210,7 @@ public class RecordMockProxyAdmin {
         stop();
     }
 
-    private String decodeRequestName(String requestName) {
+    private String encodeRequestName(String requestName) {
         if (requestName == null) return "";
 
         String[] names = requestName.split("\\^");
@@ -199,6 +224,22 @@ public class RecordMockProxyAdmin {
         }
 
         return names[0] + "^" + names[1] + "^" + names[2] + "^" + names[3] + "^" + names[4];
+    }
+
+    private String encodeMockId(String mockId) {
+        if (mockId == null) return "";
+
+        String[] s = mockId.split("\\^");
+        if (s.length != 4) {
+            return mockId;
+        }
+
+        try {
+            s[1] = new URLCodec().encode(s[1], "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+        }
+
+        return s[0] + "^" + s[1] + "^" + s[2] + "^" + s[3];
     }
 
     private void responseFile(File file, OutputStream os) throws IOException {

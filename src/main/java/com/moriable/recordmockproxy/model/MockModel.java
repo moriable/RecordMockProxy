@@ -36,6 +36,14 @@ public class MockModel extends AbstractModel {
         private int statusCode;
         private String statusMessage;
         private Map<String, String> headers;
+
+        public MockResponseModel(MockForm.MockResponseForm form) {
+            setId(Util.getHash(UUID.randomUUID().toString()));
+            setEnable(true);
+            setStatusCode(form.getStatus());
+            setStatusMessage(form.getStatusMessage());
+            setHeaders(form.getHeaders());
+        }
     }
 
     public enum MockRule {
@@ -58,12 +66,7 @@ public class MockModel extends AbstractModel {
         target.setQuery(form.getQuery());
 
         mockResponses = new ArrayList<>();
-        MockResponseModel response = new MockResponseModel();
-        response.id = Util.getHash(UUID.randomUUID().toString());
-        response.enable = true;
-        response.setStatusCode(form.getResponseStatus());
-        response.setStatusMessage(form.getResponseStatusMessage());
-        response.setHeaders(form.getResponseHeaders());
+        MockResponseModel response = new MockResponseModel(form.getResponse());
         mockResponses.add(response);
 
         rule = MockRule.valueOf(form.getRule());

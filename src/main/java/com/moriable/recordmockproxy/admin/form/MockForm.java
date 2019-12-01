@@ -15,9 +15,14 @@ public class MockForm {
 
     private String rule;
 
-    private int responseStatus;
-    private String responseStatusMessage;
-    private String responseType;
-    private Map<String, String> responseHeaders;
-    private String responseBody;
+    private MockResponseForm response;
+
+    @Data
+    public class MockResponseForm {
+        private int status;
+        private String statusMessage;
+        private String type;
+        private Map<String, String> headers;
+        private String textBody;
+    }
 }
