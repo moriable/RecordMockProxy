@@ -1,3 +1,4 @@
+import com.google.gson.Gson;
 import com.moriable.recordmockproxy.model.AbstractModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -62,6 +63,7 @@ public class Test {
     }
 
     public static void main(String[] args) throws Exception {
+        System.out.println(new Gson().toJson("{\"test\":11}"));
         System.out.println(2%2);
 
         JsonValidationService service = JsonValidationService.newInstance();
