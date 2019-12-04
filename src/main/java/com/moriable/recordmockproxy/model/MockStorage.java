@@ -9,16 +9,18 @@ import org.apache.commons.lang.SerializationUtils;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ModelStorage<K,V extends AbstractModel> {
+public class MockStorage {
 
     private File storageFile;
-    private Map<K,V> storage = null;
+    private Map<String, MockModel> storage = null;
+    private Map<String, Integer> mockCount = Collections.synchronizedMap(new HashMap<>());
     private Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExcludeWithAnotateStrategy()).create();
 
-    public ModelStorage(File storageFile) {
+    public MockStorage(File storageFile) {
         if (storageFile == null) {
             throw new IllegalArgumentException();
         }
@@ -29,8 +31,8 @@ public class ModelStorage<K,V extends AbstractModel> {
                 throw new IllegalArgumentException("storageFile is not file.");
             }
 
-            Type t = new TypeToken<Map<K,V>>(){}.getType();
-            Map<K,V> map = null;
+            Type t = new TypeToken<Map<String, MockModel>>(){}.getType();
+            Map<String ,MockModel> map = null;
             try {
                 map = gson.fromJson(new FileReader(storageFile), t);
             } catch (FileNotFoundException e) {
@@ -46,22 +48,38 @@ public class ModelStorage<K,V extends AbstractModel> {
         }
     }
 
-    public V get(K key) {
-        V value = (V) SerializationUtils.clone(storage.get(key));
+    public MockModel get(String key) {
+        if (!storage.containsKey(key)) {
+            return null;
+        }
+
+        MockModel value = (MockModel) SerializationUtils.clone(storage.get(key));
         value.setStorage(storage, key);
         return value;
     }
 
-    public void put(K key, V value) {
+    public void put(String key, MockModel value) {
         if (value.registeredStorage()) {
             throw new IllegalStateException("This value is already put. Use commit method to reflect changes.");
         }
 
         value.setStorage(null, null);
-        V clone = (V) SerializationUtils.clone(value);
+        MockModel clone = (MockModel) SerializationUtils.clone(value);
         storage.put(key, clone);
 
         value.setStorage(storage, key);
+    }
+
+    public int call(String key) {
+        synchronized (mockCount) {
+            int count = 0;
+            if (mockCount.containsKey(key)) {
+                count = mockCount.get(key);
+            }
+            mockCount.put(key, count + 1);
+
+            return count;
+        }
     }
 
     public synchronized void save() {
@@ -75,5 +93,9 @@ public class ModelStorage<K,V extends AbstractModel> {
         } catch (IOException e) {
             new IllegalStateException(e);
         }
+    }
+
+    public synchronized String dump() {
+        return gson.toJson(storage);
     }
 }

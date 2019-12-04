@@ -5,11 +5,10 @@ import com.moriable.recordmockproxy.common.Util;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Data
 @EqualsAndHashCode(callSuper=false)
@@ -43,6 +42,23 @@ public class MockModel extends AbstractModel {
             setStatusCode(form.getStatus());
             setStatusMessage(form.getStatusMessage());
             setHeaders(form.getHeaders());
+            if (getHeaders() == null) {
+                setHeaders(new LinkedHashMap<>());
+            }
+            if (form.getType() != null) {
+                getHeaders().put("Content-Type", form.getType());
+            }
+        }
+
+        public InputStream getHeaderStream() {
+            StringBuilder builder = new StringBuilder();
+            builder.append(String.format("HTTP/1.1 %d %s\r\n", statusCode, statusMessage));
+            headers.forEach((key, value) -> {
+                builder.append(key + ": " + value + "\r\n");
+            });
+            builder.append("\r\n");
+
+            return new ByteArrayInputStream(builder.toString().getBytes());
         }
     }
 

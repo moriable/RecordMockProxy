@@ -1,8 +1,7 @@
 package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
-import com.moriable.recordmockproxy.model.MockModel;
-import com.moriable.recordmockproxy.model.ModelStorage;
+import com.moriable.recordmockproxy.model.MockStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
@@ -33,7 +32,7 @@ public class RecordMockProxy {
 
     private RawHttp http = new RawHttp();
     private Map<String, RecordModel> recordMap;
-    private ModelStorage<String, MockModel> mockStorage;
+    private MockStorage mockStorage;
 
     private RecordMockProxyAdmin admin;
 
@@ -53,7 +52,7 @@ public class RecordMockProxy {
         }
 
         recordMap = Collections.synchronizedMap(new LinkedHashMap<>());
-        mockStorage = new ModelStorage<>(new File(mockDir + File.separator + "mock.json"));
+        mockStorage = new MockStorage(new File(mockDir + File.separator + "mock.json"));
 
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);

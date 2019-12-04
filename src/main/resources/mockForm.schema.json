@@ -1,0 +1,34 @@
+{
+    "type": "object",
+    "properties": {
+        "method": {
+            "type": "string",
+            "enum": [
+                "GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "TRACE", "PATCH"
+            ]
+        },
+        "host": {
+            "type": "string"
+        },
+        "port": {
+            "type": "integer"
+        },
+        "path": {
+            "type": "string"
+        },
+        "query": {
+            "type": "string"
+        },
+        "rule": {
+            "type": "string",
+            "enum": [
+                "PROXY", "ONCE", "REPEAT", "RANDOM"
+            ]
+        },
+        "response": {
+            "type": "object",
+            "$ref": "mockResponseForm.schema.json"
+        }
+    },
+    "required": ["method", "host", "port", "path", "query", "response"]
+}

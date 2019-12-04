@@ -2,7 +2,7 @@ package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.common.Util;
 import com.moriable.recordmockproxy.model.MockModel;
-import com.moriable.recordmockproxy.model.ModelStorage;
+import com.moriable.recordmockproxy.model.MockStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
 import rawhttp.core.RawHttp;
 import rawhttp.core.RawHttpRequest;
@@ -17,9 +17,7 @@ import java.io.*;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.security.KeyStore;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,7 +32,7 @@ public class RecordMockProxyWorker implements Runnable {
     private File recordDir;
     private File mockDir;
     private Map<String, RecordModel> recordMap;
-    private ModelStorage<String, MockModel> mockStorage;
+    private MockStorage mockStorage;
 
     protected RecordMockProxyWorker(Socket socket) {
         this.socket = socket;
@@ -42,7 +40,7 @@ public class RecordMockProxyWorker implements Runnable {
     }
 
     protected void init(RecordMockProxy server, RawHttp http, Map<String, RecordModel> recordMap, File recordDir,
-                         ModelStorage<String, MockModel> mockStorage, File mockDir) {
+                        MockStorage mockStorage, File mockDir) {
         this.serverRef = server;
         this.http = http;
         this.recordDir = recordDir;
@@ -118,13 +116,8 @@ public class RecordMockProxyWorker implements Runnable {
         putRequest(requestName, requestDate, request, isSSL);
         logger.info(requestName);
 
-        RawHttpResponse response = null;
         String mockId = Util.getMockId(request, port);
-        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
-        logger.info(mockId);
-        if (targetDir.exists()) {
-            response = responseMock(targetDir);
-        }
+        RawHttpResponse response = responseMock(mockId);
 
         Socket relaysocket = null;
         if (response == null) {
@@ -216,15 +209,48 @@ public class RecordMockProxyWorker implements Runnable {
         dto.setResponse(responseDto);
     }
 
-    private RawHttpResponse responseMock(File mockDir) {
+    private RawHttpResponse responseMock(String mockId) {
+        MockModel mock = mockStorage.get(mockId);
+        if (mock == null) {
+            return null;
+        }
+
+        int call = mockStorage.call(mockId);
+        List<MockModel.MockResponseModel> enableResponses = new ArrayList<>();
+        mock.getMockResponses().stream().filter(mockResponseModel -> mockResponseModel.isEnable()).forEach(mockResponseModel -> {
+            enableResponses.add(mockResponseModel);
+        });
+
+        int i = -1;
+        if (MockModel.MockRule.ONCE == mock.getRule()) {
+            if (enableResponses.size() <= call) {
+                return null;
+            }
+            i = call;
+        } else if (MockModel.MockRule.REPEAT == mock.getRule()) {
+            i = call % enableResponses.size();
+        } else if (MockModel.MockRule.RANDOM == mock.getRule()) {
+            i = new Random().nextInt(enableResponses.size());
+        } else if (MockModel.MockRule.PROXY == mock.getRule()) {
+            return null;
+        }
+
+        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
+        if (!targetDir.exists()) {
+            return null;
+        }
+
+        String mockBodyName = String.format("%04d.%s", i, enableResponses.get(i).getId());
         try {
+            InputStream bodyStream = new FileInputStream(targetDir.getAbsolutePath() + File.separator + mockBodyName);
+            InputStream headStream = enableResponses.get(i).getHeaderStream();
             SequenceInputStream inputStream = new SequenceInputStream(
-                    new FileInputStream(mockDir.getAbsolutePath() + "/head"),
-                    new FileInputStream(mockDir.getAbsolutePath() + "/body")
+                    headStream,
+                    bodyStream
             );
             return http.parseResponse(inputStream);
         } catch (IOException e) {
-            logger.log(Level.SEVERE, e.getMessage());
+            logger.warning(e.getMessage());
             return null;
         }
     }
