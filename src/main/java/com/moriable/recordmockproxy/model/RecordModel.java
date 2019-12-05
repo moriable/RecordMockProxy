@@ -1,21 +1,21 @@
-package com.moriable.recordmockproxy.admin.dto;
+package com.moriable.recordmockproxy.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
-import java.util.Date;
 import java.util.Map;
 
 @Data
-public class RecordDto implements Serializable {
-
+@EqualsAndHashCode(callSuper=false)
+public class RecordModel extends AbstractModel {
     private String id;
     private long date;
-    private RequestDto request;
-    private ResponseDto response;
+    private RequestModel request;
+    private ResponseModel response;
 
     @Data
-    public static class RequestDto implements Serializable {
+    public static class RequestModel implements Serializable {
         private String method;
         private String host;
         private int port;
@@ -26,10 +26,11 @@ public class RecordDto implements Serializable {
     }
 
     @Data
-    public static class ResponseDto implements Serializable {
+    public static class ResponseModel implements Serializable {
         private int statusCode;
+        private String statusMessage;
         private Map<String, String> headers;
         private String bodyfile;
+        private long time;
     }
-
 }

@@ -1,7 +1,10 @@
 package com.moriable.recordmockproxy;
 
-import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
 import com.moriable.recordmockproxy.common.Util;
+import com.moriable.recordmockproxy.model.MockModel;
+import com.moriable.recordmockproxy.model.MockStorage;
+import com.moriable.recordmockproxy.model.RecordModel;
+import com.moriable.recordmockproxy.model.RecordStorage;
 import rawhttp.core.RawHttp;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
@@ -15,7 +18,7 @@ import java.io.*;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.security.KeyStore;
-import java.util.Date;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,20 +29,25 @@ public class RecordMockProxyWorker implements Runnable {
     private boolean isSSL;
 
     private RecordMockProxy serverRef;
-    private RecordMockProxyService service;
     private RawHttp http;
-    private RecordMockProxyAdmin admin;
+    private File recordDir;
+    private File mockDir;
+    private RecordStorage recordStorage;
+    private MockStorage mockStorage;
 
     protected RecordMockProxyWorker(Socket socket) {
         this.socket = socket;
         this.isSSL = socket instanceof SSLSocket;
     }
 
-    protected void init(RecordMockProxy server, RecordMockProxyService service, RawHttp http, RecordMockProxyAdmin admin) {
+    protected void init(RecordMockProxy server, RawHttp http, RecordStorage recordStorage, File recordDir,
+                        MockStorage mockStorage, File mockDir) {
         this.serverRef = server;
-        this.service = service;
         this.http = http;
-        this.admin = admin;
+        this.recordDir = recordDir;
+        this.mockDir = mockDir;
+        this.recordStorage = recordStorage;
+        this.mockStorage = mockStorage;
     }
 
     @Override
@@ -106,16 +114,11 @@ public class RecordMockProxyWorker implements Runnable {
 
         String requestName = Util.getRequestName(request, requestDate, port);
 
-        admin.putRequest(requestName, requestDate, request, isSSL);
+        putRequest(requestName, requestDate, request, isSSL);
         logger.info(requestName);
 
-        RawHttpResponse response = null;
         String mockId = Util.getMockId(request, port);
-        File mockDir = new File("mock/" + mockId);
-        logger.info(mockId);
-        if (mockDir.exists()) {
-            response = responseMock(mockDir);
-        }
+        RawHttpResponse response = responseMock(mockId);
 
         Socket relaysocket = null;
         if (response == null) {
@@ -126,7 +129,7 @@ public class RecordMockProxyWorker implements Runnable {
             }
 
             if (request.getBody().isPresent()) {
-                File requestFile = new File("record/" + requestName);
+                File requestFile = new File(recordDir.getAbsolutePath() + File.separator + requestName);
                 requestFile.createNewFile();
                 try (FileOutputStream requestStrema = new FileOutputStream(requestFile)) {
                     request.writeTo(new OutputStream[]{relaysocket.getOutputStream(), requestStrema}, 8192);
@@ -146,7 +149,7 @@ public class RecordMockProxyWorker implements Runnable {
         String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType + "^" + (new Date().getTime() - requestDate.getTime());
 
         if (!socket.isClosed()) {
-            File responseFile = new File("record/" + responseName);
+            File responseFile = new File(recordDir.getAbsolutePath() + File.separator + responseName);
             responseFile.createNewFile();
             try(FileOutputStream responseStream = new FileOutputStream(responseFile)) {
                 response.writeTo(new OutputStream[]{socket.getOutputStream(), responseStream}, 8192);
@@ -156,22 +159,100 @@ public class RecordMockProxyWorker implements Runnable {
             logger.warning("client socket closed");
         }
 
-        admin.putResponse(requestName, responseName, response);
+        putResponse(requestName, responseName, response);
 
         if (relaysocket != null) {
             relaysocket.close();
         }
     }
 
-    private RawHttpResponse responseMock(File mockDir) {
+    public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
+        RecordModel dto = new RecordModel();
+        dto.setId(requestName);
+        dto.setDate(date.getTime());
+
+        int port = request.getUri().getPort();
+        if (port == -1 && isSSL) {
+            port = 443;
+        } else if (port == -1 && !isSSL) {
+            port = 80;
+        }
+
+        RecordModel.RequestModel requestModel = new RecordModel.RequestModel();
+        requestModel.setHost(request.getUri().getHost());
+        requestModel.setPort(port);
+        requestModel.setPath(request.getUri().getPath());
+        requestModel.setQuery(request.getUri().getQuery());
+        requestModel.setHeaders(new HashMap<>());
+        request.getHeaders().getHeaderNames().forEach(s -> {
+            requestModel.getHeaders().put(s, request.getHeaders().get(s).get(0));
+        });
+        if (request.getBody().isPresent()) {
+            requestModel.setBodyfile(requestName);
+        }
+
+        dto.setRequest(requestModel);
+
+        recordStorage.put(requestName, dto);
+        recordStorage.notifyRequest(requestModel);
+    }
+
+    public void putResponse(String requestName, String responseName, RawHttpResponse response) {
+        RecordModel recordModel = recordStorage.get(requestName);
+
+        RecordModel.ResponseModel responseModel = new RecordModel.ResponseModel();
+        responseModel.setStatusCode(response.getStatusCode());
+        responseModel.setHeaders(new HashMap<>());
+        response.getHeaders().getHeaderNames().forEach(s -> {
+            responseModel.getHeaders().put(s, response.getHeaders().get(s).get(0));
+        });
+        responseModel.setBodyfile(responseName);
+
+        recordModel.setResponse(responseModel);
+        recordStorage.notifyResponse(responseModel);
+    }
+
+    private RawHttpResponse responseMock(String mockId) {
+        MockModel mock = mockStorage.get(mockId);
+        if (mock == null) {
+            return null;
+        }
+
+        int call = mockStorage.call(mockId);
+        List<MockModel.MockResponseModel> enableResponses = new ArrayList<>();
+        mock.getMockResponses().stream().filter(mockResponseModel -> mockResponseModel.isEnable()).forEach(mockResponseModel -> {
+            enableResponses.add(mockResponseModel);
+        });
+
+        int i = -1;
+        if (MockModel.MockRule.ONCE == mock.getRule()) {
+            if (enableResponses.size() <= call) {
+                return null;
+            }
+            i = call;
+        } else if (MockModel.MockRule.REPEAT == mock.getRule()) {
+            i = call % enableResponses.size();
+        } else if (MockModel.MockRule.RANDOM == mock.getRule()) {
+            i = new Random().nextInt(enableResponses.size());
+        } else if (MockModel.MockRule.PROXY == mock.getRule()) {
+            return null;
+        }
+
+        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + mockId);
+        if (!targetDir.exists()) {
+            return null;
+        }
+
         try {
+            InputStream bodyStream = new FileInputStream(targetDir.getAbsolutePath() + File.separator + enableResponses.get(i).getId());
+            InputStream headStream = enableResponses.get(i).getHeaderStream();
             SequenceInputStream inputStream = new SequenceInputStream(
-                    new FileInputStream(mockDir.getAbsolutePath() + "/head"),
-                    new FileInputStream(mockDir.getAbsolutePath() + "/body")
+                    headStream,
+                    bodyStream
             );
             return http.parseResponse(inputStream);
         } catch (IOException e) {
-            logger.log(Level.SEVERE, e.getMessage());
+            logger.warning(e.getMessage());
             return null;
         }
     }

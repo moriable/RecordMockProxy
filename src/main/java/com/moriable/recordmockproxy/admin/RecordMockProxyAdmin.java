@@ -1,15 +1,21 @@
 package com.moriable.recordmockproxy.admin;
 
 import com.google.gson.Gson;
-import com.moriable.recordmockproxy.admin.dto.RecordDto;
-import com.moriable.recordmockproxy.admin.form.MockForm;
-import com.moriable.recordmockproxy.common.Util;
-import org.apache.commons.codec.net.URLCodec;
-import rawhttp.core.RawHttpRequest;
-import rawhttp.core.RawHttpResponse;
+import com.google.gson.GsonBuilder;
+import com.moriable.recordmockproxy.admin.controller.CertController;
+import com.moriable.recordmockproxy.admin.controller.MockController;
+import com.moriable.recordmockproxy.admin.controller.RecordController;
+import com.moriable.recordmockproxy.admin.controller.WebSocketController;
+import com.moriable.recordmockproxy.admin.validator.JsonValidator;
+import com.moriable.recordmockproxy.common.ExcludeWithAnotateStrategy;
+import com.moriable.recordmockproxy.model.MockStorage;
+import com.moriable.recordmockproxy.model.RecordStorage;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,165 +25,75 @@ public class RecordMockProxyAdmin {
 
     private final Logger logger = Logger.getLogger(RecordMockProxyAdmin.class.getSimpleName());
 
-    Map<String, RecordDto> record = Collections.synchronizedMap(new LinkedHashMap<>());
+    private int port;
+
+    private WebSocketController webSocketController;
+    private CertController certController;
+    private RecordController recordController;
+    private MockController mockController;
+
+    public RecordMockProxyAdmin(int adminPort, File cert, RecordStorage recordStorage, File recordDir,
+                                MockStorage mockStorage, File mockDir) {
+        this.port = adminPort;
+
+        webSocketController = new WebSocketController();
+        recordController = new RecordController(recordStorage, recordDir);
+        mockController = new MockController(mockStorage, mockDir);
+        certController = new CertController(cert);
+
+        recordStorage.addListener(webSocketController);
+    }
 
     public void start() {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExcludeWithAnotateStrategy()).create();
 
+        port(port);
+
+        staticFiles.location("/static");
+
+        webSocket("/api/websocket", webSocketController);
+
+        get("/cert", certController.get);
         path("/api", () -> {
-           path("/record", () -> {
-               get("", (request, response) -> {
-                   response.type("application/json");
-                   return gson.toJson(record.values());
-               });
-               get("/:id/response", (request, response) -> {
-                   String requestName = decodeRequestName(request.params(":id"));
-
-                   logger.info(requestName);
-
-                   RecordDto recordDto = record.get(requestName);
-                   if (recordDto == null) {
-                       response.status(404);
-                       return "{}";
-                   }
-
-                   String contentType = recordDto.getResponse().getHeaders().get("Content-Type");
-                   String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
-
-                   response.type(contentType);
-                   if (encoding != null && !encoding.isEmpty()) {
-                       response.header("Content-Encoding", encoding);
-                   }
-
-                   File bodyFile = new File("record/" + recordDto.getResponse().getBodyfile());
-                   try(BufferedInputStream input = new BufferedInputStream(new FileInputStream(bodyFile));
-                       BufferedOutputStream output = new BufferedOutputStream(response.raw().getOutputStream())) {
-                       byte[] buffer = new byte[4096];
-                       int len;
-                       while ((len = input.read(buffer)) > 0) {
-                           output.write(buffer,0,len);
-                       }
-
-                       output.flush();
-                   }
-
-                   return response.raw();
-               });
-           });
-           path("/mock", () -> {
-               post("", (request, response) -> {
-                   MockForm form = gson.fromJson(request.body(), MockForm.class);
-
-                   String mockId = Util.getMockId(form);
-                   File mockDir = new File("mock/" + mockId);
-                   if (!mockDir.exists()) {
-                       mockDir.mkdirs();
-                   }
-
-                   if (form.getResponseHeaders() != null) {
-                       File head = new File(mockDir.getAbsolutePath() + "/head");
-                       try(OutputStream headStream = new FileOutputStream(head)) {
-                           StringBuilder b = new StringBuilder();
-                           form.getResponseHeaders().forEach((key, value) -> {
-                               b.append(key + ": " + value + "\r\n");
-                           });
-                       }
-                   }
-
-                   File head = new File(mockDir.getAbsolutePath() + "/head");
-                   try(OutputStream headStream = new FileOutputStream(head)) {
-                       headStream.write(("HTTP/1.1 " + form.getResponseStatus() + " " + form.getResponseStatusMessage() + "\r\n").getBytes());
-                       if (form.getResponseHeaders() != null) {
-                           for (String key : form.getResponseHeaders().keySet()) {
-                               String value = form.getResponseHeaders().get(key);
-                               headStream.write((key + ": " + value + "\r\n").getBytes());
-                           }
-                       }
-                       if (form.getResponseType() != null) {
-                           headStream.write(("Content-Type: " + form.getResponseType() + "\r\n").getBytes());
-                       }
-                       headStream.write(("\r\n").getBytes());
-                   }
-
-                   if (form.getResponseBody() != null) {
-                       File body = new File(mockDir.getAbsolutePath() + "/body");
-                       try(OutputStream bodyStream = new FileOutputStream(body)) {
-                           bodyStream.write(form.getResponseBody().getBytes());
-                       }
-                   }
-
-                   response.type("application/json");
-                   return "{\"id\":\"" + mockId + "\"}";
-               });
-               put("/:id/body", (request, response) -> {
-                   response.type("application/json");
-                   return "{}";
-               });
-           });
+            path("/record", () -> {
+                get("", recordController.getRecordAll, gson::toJson);
+                delete("", recordController.deleteRecordAll, gson::toJson);
+                get("/:recordId", recordController.getRecord, gson::toJson);
+                get("/:recordId/request", recordController.getRequestBody);
+                get("/:recordId/response", recordController.getResponseBody);
+            });
+            path("/mock", () -> {
+                get("", mockController.getMockAll); // toJson is inside
+                post("", mockController.createMock, gson::toJson);
+                delete("", mockController.deleteMockAll, gson::toJson);
+                get("/:targetId", mockController.getMock, gson::toJson);
+                delete("/:targetId", mockController.deleteMcok, gson::toJson);
+                put("/:targetId/rule", mockController.changeMockRule, gson::toJson);
+                put("/:targetId/order", mockController.changeMockResponseOrder, gson::toJson);
+                post("/:targetId", mockController.addMockResponse, gson::toJson);
+                get("/:targetId/:responseId", mockController.getMockResponse);
+                put("/:targetId/:responseId", mockController.changeMockResponse, gson::toJson);
+                delete("/:targetId/:responseId", mockController.deleteMockResponse, gson::toJson);
+            });
         });
 
         exception(Exception.class, (exception, request, response) -> {
             logger.log(Level.SEVERE, exception.getMessage(), exception);
+            Map<String, List<String>> result = new HashMap<>();
+            List<String> errors = new ArrayList<>();
+            result.put("errors", errors);
+            if (exception instanceof JsonValidator.JsonValidatorException) {
+                errors.addAll(((JsonValidator.JsonValidatorException) exception).getErrors());
+            } else {
+                errors.add(exception.getMessage());
+            }
+
+            response.status(400);
+            response.body(gson.toJson(result));
         });
     }
 
-    public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
-        RecordDto dto = new RecordDto();
-        dto.setId(requestName);
-        dto.setDate(date.getTime());
-
-        int port = request.getUri().getPort();
-        if (port == -1 && isSSL) {
-            port = 443;
-        } else if (port == -1 && !isSSL) {
-            port = 80;
-        }
-
-        RecordDto.RequestDto requestDto = new RecordDto.RequestDto();
-        requestDto.setHost(request.getUri().getHost());
-        requestDto.setPort(port);
-        requestDto.setPath(request.getUri().getPath());
-        requestDto.setQuery(request.getUri().getQuery());
-        requestDto.setHeaders(new HashMap<>());
-        request.getHeaders().getHeaderNames().forEach(s -> {
-            requestDto.getHeaders().put(s, request.getHeaders().get(s).get(0));
-        });
-        if (request.getBody().isPresent()) {
-            requestDto.setBodyfile(requestName);
-        }
-
-        dto.setRequest(requestDto);
-
-        record.put(requestName, dto);
+    public void stop() {
+        stop();
     }
-
-    public void putResponse(String requestName, String responseName, RawHttpResponse response) {
-        RecordDto dto = record.get(requestName);
-
-        RecordDto.ResponseDto responseDto = new RecordDto.ResponseDto();
-        responseDto.setStatusCode(response.getStatusCode());
-        responseDto.setHeaders(new HashMap<>());
-        response.getHeaders().getHeaderNames().forEach(s -> {
-            responseDto.getHeaders().put(s, response.getHeaders().get(s).get(0));
-        });
-        responseDto.setBodyfile(responseName);
-
-        dto.setResponse(responseDto);
-    }
-
-    private String decodeRequestName(String requestName) {
-        if (requestName == null) return "";
-
-        String[] names = requestName.split("\\^");
-        if (names.length != 5) {
-            return requestName;
-        }
-
-        try {
-            names[2] = new URLCodec().encode(names[2], "UTF-8");
-        } catch (UnsupportedEncodingException e) { }
-
-        return names[0] + "^" + names[1] + "^" + names[2] + "^" + names[3] + "^" + names[4];
-    }
-
 }
