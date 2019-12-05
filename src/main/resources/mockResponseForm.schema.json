@@ -1,0 +1,20 @@
+{
+    "properties": {
+        "status": {
+            "type": "integer"
+        },
+        "statusMessage": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "headers": {
+            "type": "object"
+        },
+        "textBody": {
+            "type": "string"
+        }
+    },
+    "required": ["status", "statusMessage"]
+}
