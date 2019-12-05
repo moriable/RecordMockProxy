@@ -70,6 +70,18 @@ public class MockStorage {
         value.setStorage(storage, key);
     }
 
+    public void clear() {
+        synchronized (storage) {
+            storage.clear();
+        }
+    }
+
+    public MockModel remove(String key) {
+        synchronized (storage) {
+            return storage.remove(key);
+        }
+    }
+
     public int call(String key) {
         synchronized (mockCount) {
             int count = 0;

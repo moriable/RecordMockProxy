@@ -2,7 +2,7 @@ package com.moriable.recordmockproxy;
 
 import com.moriable.recordmockproxy.admin.RecordMockProxyAdmin;
 import com.moriable.recordmockproxy.model.MockStorage;
-import com.moriable.recordmockproxy.model.RecordModel;
+import com.moriable.recordmockproxy.model.RecordStorage;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
 import rawhttp.core.RawHttp;
@@ -17,7 +17,6 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -31,7 +30,7 @@ public class RecordMockProxy {
     private InetSocketAddress serverAddress;
 
     private RawHttp http = new RawHttp();
-    private Map<String, RecordModel> recordMap;
+    private RecordStorage recordStorage;
     private MockStorage mockStorage;
 
     private RecordMockProxyAdmin admin;
@@ -44,19 +43,18 @@ public class RecordMockProxy {
         FileUtils.deleteDirectory(recordDir);
         recordDir.mkdirs();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(recordDir)));
-        System.out.println(recordDir.getAbsolutePath());
 
         mockDir = new File("mock");
         if (!mockDir.exists()) {
             mockDir.mkdirs();
         }
 
-        recordMap = Collections.synchronizedMap(new LinkedHashMap<>());
+        recordStorage = new RecordStorage(Collections.synchronizedMap(new LinkedHashMap<>()));
         mockStorage = new MockStorage(new File(mockDir + File.separator + "mock.json"));
 
         this.serverAddress = serverAddress;
         RecordMockProxyCA.init(caCertPath, caPrivateKeyPath);
-        admin = new RecordMockProxyAdmin(adminPort, new File(caCertPath), recordMap, recordDir, mockStorage, mockDir);
+        admin = new RecordMockProxyAdmin(adminPort, new File(caCertPath), recordStorage, recordDir, mockStorage, mockDir);
     }
 
     public static void main(String[] args) throws Exception {
@@ -144,7 +142,7 @@ public class RecordMockProxy {
     }
 
     protected void submitWorker(RecordMockProxyWorker worker) {
-        worker.init(this, http, recordMap, recordDir, mockStorage, mockDir);
+        worker.init(this, http, recordStorage, recordDir, mockStorage, mockDir);
         execService.submit(worker);
     }
 }

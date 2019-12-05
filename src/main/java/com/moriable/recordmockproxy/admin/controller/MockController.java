@@ -10,6 +10,9 @@ import spark.Route;
 
 import javax.servlet.MultipartConfigElement;
 import java.io.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MockController extends BaseController {
 
@@ -23,12 +26,12 @@ public class MockController extends BaseController {
         this.validator = new JsonValidator();
     }
 
-    public Route getAll = (request, response) -> {
+    public Route getMockAll = (request, response) -> {
         response.type("application/json");
         return mockStorage.dump();
     };
 
-    public Route create = (request, response) -> {
+    public Route createMock = (request, response) -> {
         response.type("application/json");
         if (request.contentType().startsWith("application/json")) {
             return createMock(request.body(), null, "text/plain");
@@ -45,62 +48,140 @@ public class MockController extends BaseController {
         throw new Exception("invalid Content-Type");
     };
 
-    public Route deleteAll = (request, response) -> {
-        // TODO
-        return null;
+    public Route deleteMockAll = (request, response) -> {
+        FileUtils.deleteQuietly(mockDir);
+        mockDir.mkdirs();
+
+        mockStorage.clear();
+
+        response.type("application/json");
+        return new HashMap<>();
     };
 
-    public Route get = (request, response) -> {
+    public Route getMock = (request, response) -> {
         String targetId = getOriginalId(request.params(":targetId"), 4, 1);
         response.type("application/json");
         return mockStorage.get(targetId);
     };
 
-    public Route delete = (request, response) -> {
-        // TODO
-        return null;
+    public Route deleteMcok = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        mockStorage.remove(targetId);
+        mockStorage.save();
+
+        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + targetId);
+        FileUtils.deleteQuietly(targetDir);
+
+        response.type("application/json");
+        return new HashMap<>();
     };
 
-    public Route addResponse = (request, response) -> {
+    public Route addMockResponse = (request, response) -> {
         String targetId = getOriginalId(request.params(":targetId"), 4, 1);
 
         response.type("application/json");
         if (request.contentType().startsWith("application/json")) {
-            return addResponse(targetId, request.body(), null, "text/plain");
+            return addResponse(targetId, null, request.body(), null, "text/plain", -1);
         } else if (request.contentType().startsWith("multipart/form-data")) {
             return addResponse(targetId,
+                    null,
                     getFormdataString(request, "form"),
                     request.raw().getPart("responseBody").getInputStream(),
-                    request.raw().getPart("responseBody").getContentType()
+                    request.raw().getPart("responseBody").getContentType(),
+                    -1
             );
         }
 
         throw new Exception("invalid Content-Type");
     };
 
-    public Route getResponse = (request, response) -> {
-        // TODO
-        return null;
+    public Route getMockResponse = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        String responseId = request.params(":responseId");
+
+        MockModel mockModel = mockStorage.get(targetId);
+        if (mockModel == null) {
+            throw new Exception("mock not found.");
+        }
+
+        MockModel.MockResponseModel mockResponseModel = mockModel.getMockResponses().stream().filter(m -> m.getId().equals(responseId))
+                .findFirst().get();
+
+        if (mockResponseModel == null) {
+            throw new Exception("response not found.");
+        }
+
+        String contentType = mockResponseModel.getHeaders().get("Content-Type");
+        String encoding = mockResponseModel.getHeaders().get("Content-Encoding");
+        File bodyFile = new File(mockDir.getAbsolutePath() + File.separator + targetId + File.separator + mockResponseModel.getId());
+
+        responseFile(bodyFile, response, contentType, encoding);
+        return response.raw();
     };
 
-    public Route changeResponse = (request, response) -> {
-        // TODO
-        return null;
+    public Route changeMockResponse = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        String responseId = request.params(":responseId");
+
+        int pos = deleteResponse(targetId, responseId);
+
+        response.type("application/json");
+        if (request.contentType().startsWith("application/json")) {
+            return addResponse(targetId, responseId, request.body(), null, "text/plain", pos);
+        } else if (request.contentType().startsWith("multipart/form-data")) {
+            return addResponse(targetId,
+                    responseId,
+                    getFormdataString(request, "form"),
+                    request.raw().getPart("responseBody").getInputStream(),
+                    request.raw().getPart("responseBody").getContentType(),
+                    pos
+            );
+        }
+
+        throw new Exception("invalid Content-Type");
     };
 
-    public Route deleteResponse = (request, response) -> {
-        // TODO
-        return null;
+    public Route deleteMockResponse = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        String responseId = request.params(":responseId");
+
+        deleteResponse(targetId, responseId);
+
+        response.type("application/json");
+        return new HashMap<>();
     };
 
-    public Route changeRule = (request, response) -> {
-        // TODO
-        return null;
+    public Route changeMockRule = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        Map<String, String> form = new Gson().fromJson(request.body(), Map.class);
+        MockModel.MockRule rule = MockModel.MockRule.valueOf(form.get("rule"));
+
+        MockModel mockModel = mockStorage.get(targetId);
+        mockModel.setRule(rule);
+        mockModel.commit();
+        mockStorage.save();
+
+        response.type("application/json");
+        return mockModel;
     };
 
-    public Route changeOrder = (request, response) -> {
-        // TODO
-        return null;
+    public Route changeMockResponseOrder = (request, response) -> {
+        String targetId = getOriginalId(request.params(":targetId"), 4, 1);
+        List<String> form = new Gson().fromJson(request.body(), List.class);
+
+        MockModel mockModel = mockStorage.get(targetId);
+        mockModel.getMockResponses().sort((a, b) -> {
+            int ia = form.indexOf(a.getId());
+            if (ia == -1) ia = Integer.MAX_VALUE;
+            int ib = form.indexOf(b.getId());
+            if (ib == -1) ib = Integer.MAX_VALUE;
+            return ia - ib;
+        });
+        mockModel.commit();
+        mockStorage.save();
+
+        response.type("application/json");
+        return mockModel;
     };
 
     private MockModel createMock(String formString, InputStream body, String defaultContentType) throws JsonValidator.JsonValidatorException, IOException {
@@ -119,7 +200,7 @@ public class MockController extends BaseController {
             body = new ByteArrayInputStream(form.getResponse().getTextBody().getBytes());
         }
 
-        addResponseBody(model.getTarget().getId(), model, body, defaultContentType);
+        addResponseBody(model.getTarget().getId(), model.getMockResponses().get(0), body, defaultContentType);
 
         mockStorage.put(model.getTarget().getId(), model);
         mockStorage.save();
@@ -127,20 +208,24 @@ public class MockController extends BaseController {
         return model;
     }
 
-    private MockModel addResponse(String targetId, String formString, InputStream body, String defaultContentType) throws JsonValidator.JsonValidatorException, IOException {
+    private MockModel addResponse(String targetId, String responseId, String formString, InputStream body, String defaultContentType, int addPos) throws JsonValidator.JsonValidatorException, IOException {
         String json = validator.validate("/mockResponseForm.schema.json", formString);
 
         MockForm.MockResponseForm form = new Gson().fromJson(json, MockForm.MockResponseForm.class);
-        MockModel.MockResponseModel responseModel = new MockModel.MockResponseModel(form);
+        MockModel.MockResponseModel responseModel = new MockModel.MockResponseModel(form, responseId);
 
         if (body == null) {
             body = new ByteArrayInputStream(form.getTextBody().getBytes());
         }
 
         MockModel mockModel = mockStorage.get(targetId);
-        mockModel.getMockResponses().add(responseModel);
+        if (addPos < 0) {
+            mockModel.getMockResponses().add(responseModel);
+        } else {
+            mockModel.getMockResponses().add(addPos, responseModel);
+        }
 
-        addResponseBody(targetId, mockModel, body, defaultContentType);
+        addResponseBody(targetId, responseModel, body, defaultContentType);
 
         mockModel.commit();
         mockStorage.save();
@@ -148,20 +233,47 @@ public class MockController extends BaseController {
         return mockModel;
     }
 
-    private void addResponseBody(String targetId, MockModel mockModel, InputStream body, String defaultContentType) throws IOException {
+    private void addResponseBody(String targetId, MockModel.MockResponseModel mockResponseModel, InputStream body, String defaultContentType) throws IOException {
         File targetDir = new File(mockDir.getAbsolutePath() + File.separator + targetId);
         if (!targetDir.exists()) {
             throw new IllegalStateException("target directory not found.");
         }
 
-        int i = mockModel.getMockResponses().size() - 1;
-
-        String filename = String.format("%04d.%s", i, mockModel.getMockResponses().get(i).getId());
-        File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + filename);
+        File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + mockResponseModel.getId());
         pipe(body, new FileOutputStream(bodyFile));
 
-        if (!mockModel.getMockResponses().get(i).getHeaders().containsKey("Content-Type")) {
-            mockModel.getMockResponses().get(i).getHeaders().put("Content-Type", defaultContentType);
+        if (!mockResponseModel.getHeaders().containsKey("Content-Type")) {
+            mockResponseModel.getHeaders().put("Content-Type", defaultContentType);
         }
+    }
+
+    private int deleteResponse(String targetId, String responseId) {
+        MockModel mockModel = mockStorage.get(targetId);
+        int pos = -1;
+        for (int i = 0; i < mockModel.getMockResponses().size(); i++) {
+            if (mockModel.getMockResponses().get(i).getId().equals(responseId)) {
+                pos = i;
+                break;
+            }
+        }
+
+        if (pos == -1) {
+            throw new IllegalArgumentException("response not found.");
+        }
+
+        MockModel.MockResponseModel mockResponseModel = mockModel.getMockResponses().remove(pos);
+
+        File targetDir = new File(mockDir.getAbsolutePath() + File.separator + targetId);
+        if (!targetDir.exists()) {
+            throw new IllegalStateException("target directory not found.");
+        }
+
+        File bodyFile = new File(targetDir.getAbsolutePath() + File.separator + mockResponseModel.getId());
+        bodyFile.delete();
+
+        mockModel.commit();
+        mockStorage.save();
+
+        return pos;
     }
 }

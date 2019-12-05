@@ -36,8 +36,12 @@ public class MockModel extends AbstractModel {
         private String statusMessage;
         private Map<String, String> headers;
 
-        public MockResponseModel(MockForm.MockResponseForm form) {
-            setId(Util.getHash(UUID.randomUUID().toString()));
+        public MockResponseModel(MockForm.MockResponseForm form, String id) {
+            if (id == null) {
+                setId(Util.getHash(UUID.randomUUID().toString()));
+            } else {
+                setId(id);
+            }
             setEnable(true);
             setStatusCode(form.getStatus());
             setStatusMessage(form.getStatusMessage());
@@ -82,7 +86,7 @@ public class MockModel extends AbstractModel {
         target.setQuery(form.getQuery());
 
         mockResponses = new ArrayList<>();
-        MockResponseModel response = new MockResponseModel(form.getResponse());
+        MockResponseModel response = new MockResponseModel(form.getResponse(), null);
         mockResponses.add(response);
 
         rule = MockRule.valueOf(form.getRule());

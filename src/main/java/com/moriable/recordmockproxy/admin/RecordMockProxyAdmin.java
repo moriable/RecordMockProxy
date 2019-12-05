@@ -5,12 +5,13 @@ import com.google.gson.GsonBuilder;
 import com.moriable.recordmockproxy.admin.controller.CertController;
 import com.moriable.recordmockproxy.admin.controller.MockController;
 import com.moriable.recordmockproxy.admin.controller.RecordController;
+import com.moriable.recordmockproxy.admin.controller.WebSocketController;
 import com.moriable.recordmockproxy.admin.validator.JsonValidator;
 import com.moriable.recordmockproxy.common.ExcludeWithAnotateStrategy;
 import com.moriable.recordmockproxy.model.MockStorage;
-import com.moriable.recordmockproxy.model.RecordModel;
+import com.moriable.recordmockproxy.model.RecordStorage;
 
-import java.io.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,17 +27,21 @@ public class RecordMockProxyAdmin {
 
     private int port;
 
+    private WebSocketController webSocketController;
     private CertController certController;
     private RecordController recordController;
     private MockController mockController;
 
-    public RecordMockProxyAdmin(int adminPort, File cert, Map<String, RecordModel> recordMap, File recordDir,
+    public RecordMockProxyAdmin(int adminPort, File cert, RecordStorage recordStorage, File recordDir,
                                 MockStorage mockStorage, File mockDir) {
         this.port = adminPort;
 
-        recordController = new RecordController(recordMap, recordDir);
+        webSocketController = new WebSocketController();
+        recordController = new RecordController(recordStorage, recordDir);
         mockController = new MockController(mockStorage, mockDir);
         certController = new CertController(cert);
+
+        recordStorage.addListener(webSocketController);
     }
 
     public void start() {
@@ -44,28 +49,31 @@ public class RecordMockProxyAdmin {
 
         port(port);
 
+        staticFiles.location("/static");
+
+        webSocket("/api/websocket", webSocketController);
+
         get("/cert", certController.get);
         path("/api", () -> {
             path("/record", () -> {
-                get("", recordController.getAll, gson::toJson);
-                delete("", recordController.deleteAll, gson::toJson);
-                get("/:recordId", recordController.get, gson::toJson);
-                get("/:recordId/request", recordController.request);
-                get("/:recordId/response", recordController.response);
-                get("/csv", recordController.csv);
+                get("", recordController.getRecordAll, gson::toJson);
+                delete("", recordController.deleteRecordAll, gson::toJson);
+                get("/:recordId", recordController.getRecord, gson::toJson);
+                get("/:recordId/request", recordController.getRequestBody);
+                get("/:recordId/response", recordController.getResponseBody);
             });
             path("/mock", () -> {
-                get("", mockController.getAll); // toJson is inside
-                post("", mockController.create, gson::toJson);
-                delete("", mockController.deleteAll, gson::toJson);
-                get("/:targetId", mockController.get, gson::toJson);
-                delete("/:targetId", mockController.delete, gson::toJson);
-                post("/:targetId", mockController.addResponse, gson::toJson);
-                get("/:targetId/:responseId", mockController.getResponse);
-                put("/:targetId/:responseId", mockController.changeResponse, gson::toJson);
-                delete("/:targetId/:responseId", mockController.deleteResponse, gson::toJson);
-                put("/:targetId/rule", mockController.changeRule, gson::toJson);
-                put("/:targetId/order", mockController.changeOrder, gson::toJson);
+                get("", mockController.getMockAll); // toJson is inside
+                post("", mockController.createMock, gson::toJson);
+                delete("", mockController.deleteMockAll, gson::toJson);
+                get("/:targetId", mockController.getMock, gson::toJson);
+                delete("/:targetId", mockController.deleteMcok, gson::toJson);
+                put("/:targetId/rule", mockController.changeMockRule, gson::toJson);
+                put("/:targetId/order", mockController.changeMockResponseOrder, gson::toJson);
+                post("/:targetId", mockController.addMockResponse, gson::toJson);
+                get("/:targetId/:responseId", mockController.getMockResponse);
+                put("/:targetId/:responseId", mockController.changeMockResponse, gson::toJson);
+                delete("/:targetId/:responseId", mockController.deleteMockResponse, gson::toJson);
             });
         });
 

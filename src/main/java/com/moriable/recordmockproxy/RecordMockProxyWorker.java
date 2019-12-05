@@ -4,6 +4,7 @@ import com.moriable.recordmockproxy.common.Util;
 import com.moriable.recordmockproxy.model.MockModel;
 import com.moriable.recordmockproxy.model.MockStorage;
 import com.moriable.recordmockproxy.model.RecordModel;
+import com.moriable.recordmockproxy.model.RecordStorage;
 import rawhttp.core.RawHttp;
 import rawhttp.core.RawHttpRequest;
 import rawhttp.core.RawHttpResponse;
@@ -31,7 +32,7 @@ public class RecordMockProxyWorker implements Runnable {
     private RawHttp http;
     private File recordDir;
     private File mockDir;
-    private Map<String, RecordModel> recordMap;
+    private RecordStorage recordStorage;
     private MockStorage mockStorage;
 
     protected RecordMockProxyWorker(Socket socket) {
@@ -39,13 +40,13 @@ public class RecordMockProxyWorker implements Runnable {
         this.isSSL = socket instanceof SSLSocket;
     }
 
-    protected void init(RecordMockProxy server, RawHttp http, Map<String, RecordModel> recordMap, File recordDir,
+    protected void init(RecordMockProxy server, RawHttp http, RecordStorage recordStorage, File recordDir,
                         MockStorage mockStorage, File mockDir) {
         this.serverRef = server;
         this.http = http;
         this.recordDir = recordDir;
         this.mockDir = mockDir;
-        this.recordMap = recordMap;
+        this.recordStorage = recordStorage;
         this.mockStorage = mockStorage;
     }
 
@@ -177,36 +178,38 @@ public class RecordMockProxyWorker implements Runnable {
             port = 80;
         }
 
-        RecordModel.RequestModel requestDto = new RecordModel.RequestModel();
-        requestDto.setHost(request.getUri().getHost());
-        requestDto.setPort(port);
-        requestDto.setPath(request.getUri().getPath());
-        requestDto.setQuery(request.getUri().getQuery());
-        requestDto.setHeaders(new HashMap<>());
+        RecordModel.RequestModel requestModel = new RecordModel.RequestModel();
+        requestModel.setHost(request.getUri().getHost());
+        requestModel.setPort(port);
+        requestModel.setPath(request.getUri().getPath());
+        requestModel.setQuery(request.getUri().getQuery());
+        requestModel.setHeaders(new HashMap<>());
         request.getHeaders().getHeaderNames().forEach(s -> {
-            requestDto.getHeaders().put(s, request.getHeaders().get(s).get(0));
+            requestModel.getHeaders().put(s, request.getHeaders().get(s).get(0));
         });
         if (request.getBody().isPresent()) {
-            requestDto.setBodyfile(requestName);
+            requestModel.setBodyfile(requestName);
         }
 
-        dto.setRequest(requestDto);
+        dto.setRequest(requestModel);
 
-        recordMap.put(requestName, dto);
+        recordStorage.put(requestName, dto);
+        recordStorage.notifyRequest(requestModel);
     }
 
     public void putResponse(String requestName, String responseName, RawHttpResponse response) {
-        RecordModel dto = recordMap.get(requestName);
+        RecordModel recordModel = recordStorage.get(requestName);
 
-        RecordModel.ResponseModel responseDto = new RecordModel.ResponseModel();
-        responseDto.setStatusCode(response.getStatusCode());
-        responseDto.setHeaders(new HashMap<>());
+        RecordModel.ResponseModel responseModel = new RecordModel.ResponseModel();
+        responseModel.setStatusCode(response.getStatusCode());
+        responseModel.setHeaders(new HashMap<>());
         response.getHeaders().getHeaderNames().forEach(s -> {
-            responseDto.getHeaders().put(s, response.getHeaders().get(s).get(0));
+            responseModel.getHeaders().put(s, response.getHeaders().get(s).get(0));
         });
-        responseDto.setBodyfile(responseName);
+        responseModel.setBodyfile(responseName);
 
-        dto.setResponse(responseDto);
+        recordModel.setResponse(responseModel);
+        recordStorage.notifyResponse(responseModel);
     }
 
     private RawHttpResponse responseMock(String mockId) {
@@ -240,9 +243,8 @@ public class RecordMockProxyWorker implements Runnable {
             return null;
         }
 
-        String mockBodyName = String.format("%04d.%s", i, enableResponses.get(i).getId());
         try {
-            InputStream bodyStream = new FileInputStream(targetDir.getAbsolutePath() + File.separator + mockBodyName);
+            InputStream bodyStream = new FileInputStream(targetDir.getAbsolutePath() + File.separator + enableResponses.get(i).getId());
             InputStream headStream = enableResponses.get(i).getHeaderStream();
             SequenceInputStream inputStream = new SequenceInputStream(
                     headStream,

@@ -1,65 +1,81 @@
 package com.moriable.recordmockproxy.admin.controller;
 
 import com.moriable.recordmockproxy.model.RecordModel;
+import com.moriable.recordmockproxy.model.RecordStorage;
+import org.apache.commons.io.FileUtils;
 import spark.Route;
 
 import java.io.File;
-import java.util.Map;
+import java.util.HashMap;
 
 public class RecordController extends BaseController {
 
-    private Map<String, RecordModel> recordMap;
+    private RecordStorage recordStorage;
     private File recordDir;
 
-    public RecordController(Map<String, RecordModel> recordMap, File recordDir) {
-        this.recordMap = recordMap;
+    public RecordController(RecordStorage recordStorage, File recordDir) {
+        this.recordStorage = recordStorage;
         this.recordDir = recordDir;
     }
 
-    public Route get = (request, response) -> {
-        // TODO
-        return null;
-    };
-
-    public Route getAll = (request, response) -> {
-        response.type("application/json");
-        return recordMap.values();
-    };
-
-    public Route deleteAll = (request, response) -> {
-        // TODO
-        return null;
-    };
-
-    public Route request = (request, response) -> {
-        // TODO
-        return null;
-    };
-
-    public Route response = (request, response) -> {
+    public Route getRecord = (request, response) -> {
         String recordId = getOriginalId(request.params(":recordId"), 5, 2);
 
-        RecordModel recordDto = recordMap.get(recordId);
-        if (recordDto == null) {
+        response.type("application/json");
+        return recordStorage.get(recordId);
+    };
+
+    public Route getRecordAll = (request, response) -> {
+        response.type("application/json");
+        return recordStorage.values();
+    };
+
+    public Route deleteRecordAll = (request, response) -> {
+        for (File file : recordDir.listFiles()) {
+            FileUtils.forceDelete(file);
+        }
+        recordStorage.clear();
+
+        response.type("application/json");
+        return new HashMap<>();
+    };
+
+    public Route getRequestBody = (request, response) -> {
+        String recordId = getOriginalId(request.params(":recordId"), 5, 2);
+        RecordModel recordModel = recordStorage.get(recordId);
+        if (recordModel == null) {
             throw new Exception("record not found.");
         }
 
-        String contentType = recordDto.getResponse().getHeaders().get("Content-Type");
-        response.type(contentType);
-
-        String encoding = recordDto.getResponse().getHeaders().get("Content-Encoding");
-        if (encoding != null && !encoding.isEmpty()) {
-            response.header("Content-Encoding", encoding);
+        if (recordModel.getRequest().getBodyfile() == null) {
+            throw new Exception("request body is nothing.");
         }
 
-        File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordDto.getResponse().getBodyfile());
-        responseFile(bodyFile, response);
+        String contentType = recordModel.getRequest().getHeaders().get("Content-Type");
+        String encoding = recordModel.getRequest().getHeaders().get("Content-Encoding");
+        File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordModel.getRequest().getBodyfile());
+
+        responseFile(bodyFile, response, contentType, encoding);
         return response.raw();
     };
 
-    public Route csv = (request, response) -> {
-        // TODO
-        return null;
-    };
+    public Route getResponseBody = (request, response) -> {
+        String recordId = getOriginalId(request.params(":recordId"), 5, 2);
 
+        RecordModel recordModel = recordStorage.get(recordId);
+        if (recordModel == null) {
+            throw new Exception("record not found.");
+        }
+
+        if (recordModel.getResponse().getBodyfile() == null) {
+            throw new Exception("request body is nothing.");
+        }
+
+        String contentType = recordModel.getResponse().getHeaders().get("Content-Type");
+        String encoding = recordModel.getResponse().getHeaders().get("Content-Encoding");
+        File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordModel.getResponse().getBodyfile());
+
+        responseFile(bodyFile, response, contentType, encoding);
+        return response.raw();
+    };
 }

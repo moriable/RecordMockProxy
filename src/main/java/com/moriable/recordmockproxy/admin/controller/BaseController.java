@@ -33,6 +33,16 @@ public abstract class BaseController {
         return result.toString();
     }
 
+    protected void responseFile(File file, Response response, String contentType, String contentEncoding) throws IOException {
+        if (contentType != null) {
+            response.type(contentType);
+        }
+        if (contentEncoding != null) {
+            response.header("Content-Encoding", contentEncoding);
+        }
+        responseFile(file, response);
+    }
+
     protected void responseFile(File file, Response response) throws IOException {
         pipe(new FileInputStream(file), response.raw().getOutputStream());
     }
