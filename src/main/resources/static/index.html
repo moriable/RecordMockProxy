@@ -1,22 +1,214 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>RecordMockProxy</title>
+
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <style>
+.tabsFixHead {position: sticky; top: 0; background-color:#FFFFFF; height: 41px; z-index:8000}
+.tableFixHead { overflow-y: auto; height: 100px;}
+.tableFixHead thead tr { position: sticky; top: 41px; background-color:#FFFFFF; z-index:8000}
+.tableFixHead thead tr th {
+    position: sticky;
+    top: 41px;
+    background-color:#FFFFFF;
+    z-index:9999;
+    font-size: 0.8rem
+
+    border-top: 0px solid #888;
+    border-left: 0px solid #888;
+    border-right: 1px solid #888;
+    border-bottom: 1px solid #888;
+}
+.tableFixHead tbody tr { height: 1.4rem;white-space: nowrap}
+.tableFixHead tbody td {
+    padding: 1px;
+    font-size: 0.8rem;
+    overflow:hidden;
+
+    border-top: 0px solid #888;
+    border-left: 0px solid #888;
+    border-right: 1px solid #888;
+    border-bottom: 1px solid #888;
+}
+#record-detail {
+    position: sticky;
+    top: 51px;
+    background-color: #FFFFFF;
+}
+    </style>
+
+    <script src="js/vendor/vue.js"></script>
+    <script src="js/vendor/vue-router.js"></script>
+    <script src="js/vendor/axios.js"></script>
 </head>
 <body>
-<h1>index</h1>
+<div id="app">
+    <ul class="nav nav-tabs tabsFixHead">
+        <li class="nav-item">
+            <span class="nav-link disabled">RecordMockProxy</span>
+        </li>
+        <li class="nav-item">
+            <router-link class="nav-link" active-class="active" to="/record">Record</router-link>
+        </li>
+        <li class="nav-item">
+            <router-link class="nav-link" active-class="active" to="/mock">Mock</router-link>
+        </li>
+    </ul>
+    <router-view></router-view>
+</div>
 
-<script src="vendor/vue.js"></script>
-<script>
-var connection = new WebSocket("ws://localhost:4567/api/websocket");
-connection.addEventListener('open', function (event) {
-    console.log(event);
-});
-
-connection.addEventListener('message', function (event) {
-    console.log(event);
-});
+<script type="text/x-template" id="record">
+    <div class="row" style="margin-top:10px;">
+        <div class="col-7" style="padding-right:0px;">
+            <table class="table table-sm table-striped table-bordered tableFixHead">
+                <thead>
+                <tr class="d-flex">
+                    <th class="col-2">Date</th>
+                    <th class="col-7">Path</th>
+                    <th class="col-1">Method</th>
+                    <th class="col-1">Status</th>
+                    <th class="col-1">Time</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                <tr class="d-flex">
+                    <td class="col-2">2019/12/04 10:00:00.000</td>
+                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                    <td class="col-1">GET</td>
+                    <td class="col-1">200</td>
+                    <td class="col-1">300</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-5" style="padding-left:0px;">
+            <div id="record-detail">
+                <ul class="nav nav-tabs tabsFixHead">
+                    <li class="nav-item">
+                        <span class="nav-link active">Request</span>
+                    </li>
+                    <li class="nav-item">
+                        <span class="nav-link">Response</span>
+                    </li>
+                </ul>
+            </div>
+            <div>
+                xxxxxxxxxxxxxxxxxxxx
+            </div>
+        </div>
+    </div>
 </script>
+
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<script src="js/index.js"></script>
 </body>
 </html>
