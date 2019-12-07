@@ -5,38 +5,77 @@
     <title>RecordMockProxy</title>
 
     <link rel="stylesheet" href="css/bootstrap.css">
+
+
     <style>
-.tabsFixHead {position: sticky; top: 0; background-color:#FFFFFF; height: 41px; z-index:8000}
-.tableFixHead { overflow-y: auto; height: 100px;}
-.tableFixHead thead tr { position: sticky; top: 41px; background-color:#FFFFFF; z-index:8000}
-.tableFixHead thead tr th {
-    position: sticky;
-    top: 41px;
-    background-color:#FFFFFF;
-    z-index:9999;
-    font-size: 0.8rem
-
-    border-top: 0px solid #888;
-    border-left: 0px solid #888;
-    border-right: 1px solid #888;
-    border-bottom: 1px solid #888;
+html, body, #app {
+    height: 100%;
 }
-.tableFixHead tbody tr { height: 1.4rem;white-space: nowrap}
-.tableFixHead tbody td {
-    padding: 1px;
+body {
+    padding-top: 1rem;
+}
+
+#content {
+    height:calc(100% - 3rem);
+    overflow:auto;
+    border-bottom: 1px solid #CCC;
+}
+
+#record-content {
+    height:100%;
+    display: flex;
+}
+
+#record-list {
+    flex: 1;
+    height:100%;
+    overflow:auto;
+}
+
+#record-list-table {
+    border-bottom: 1px solid #AAA;
+}
+
+#record-list-table thead tr {
+    position:sticky;
+    top:0;
+    z-index: 1000;
+    background-color: #FFF;
+}
+
+#record-list-table thead tr th {
     font-size: 0.8rem;
-    overflow:hidden;
+    padding: 0.1rem;
+    border-right: 1px solid #AAA;
+}
 
-    border-top: 0px solid #888;
-    border-left: 0px solid #888;
-    border-right: 1px solid #888;
-    border-bottom: 1px solid #888;
+#record-list-table tbody tr td {
+    font-size: 0.8rem;
+    padding: 0.1rem;
+    overflow: hidden;
+    border-right: 1px solid #AAA;
 }
+
 #record-detail {
-    position: sticky;
-    top: 51px;
-    background-color: #FFFFFF;
+    width: 50%;
+    height:100%;
+    padding-top: 0.5rem;
+    box-shadow: -0.1rem -0rem 0.5rem rgba(0,0,0,0.4);
+
+    z-index: 2000;
 }
+
+#record-detail-tabs {
+    height:3rem;
+}
+
+#record-detail-content {
+    height: calc(100% - 3rem);
+    overflow: auto;
+    border-top: 1px solid #CCC;
+    padding: 0.5rem;
+}
+
     </style>
 
     <script src="js/vendor/vue.js"></script>
@@ -45,7 +84,7 @@
 </head>
 <body>
 <div id="app">
-    <ul class="nav nav-tabs tabsFixHead">
+    <ul class="nav nav-tabs">
         <li class="nav-item">
             <span class="nav-link disabled">RecordMockProxy</span>
         </li>
@@ -56,151 +95,64 @@
             <router-link class="nav-link" active-class="active" to="/mock">Mock</router-link>
         </li>
     </ul>
-    <router-view></router-view>
+    <div id="content">
+        <router-view></router-view>
+    </div>
 </div>
 
 <script type="text/x-template" id="record">
-    <div class="row" style="margin-top:10px;">
-        <div class="col-7" style="padding-right:0px;">
-            <table class="table table-sm table-striped table-bordered tableFixHead">
+    <div id="record-content">
+        <div id="record-list">
+            <table class="table table-sm table-striped" id="record-list-table">
                 <thead>
-                <tr class="d-flex">
-                    <th class="col-2">Date</th>
-                    <th class="col-7">Path</th>
-                    <th class="col-1">Method</th>
-                    <th class="col-1">Status</th>
-                    <th class="col-1">Time</th>
-                </tr>
+                    <tr class="d-flex">
+                        <th class="col-2">Date</th>
+                        <th class="col-7">Path</th>
+                        <th class="col-1">Method</th>
+                        <th class="col-1">Status</th>
+                        <th class="col-1">Time</th>
+                    </tr>
                 </thead>
                 <tbody>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
-                <tr class="d-flex">
-                    <td class="col-2">2019/12/04 10:00:00.000</td>
-                    <td class="col-7">www.heartsoft.co.jp/test.html</td>
-                    <td class="col-1">GET</td>
-                    <td class="col-1">200</td>
-                    <td class="col-1">300</td>
-                </tr>
+                    <tr class="d-flex" v-for="i in 20">
+                        <td class="col-2">10:00:00.000</td>
+                        <td class="col-7">www.heartsoft.co.jp/test.html</td>
+                        <td class="col-1">GET</td>
+                        <td class="col-1">200</td>
+                        <td class="col-1">300</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-        <div class="col-5" style="padding-left:0px;">
-            <div id="record-detail">
-                <ul class="nav nav-tabs tabsFixHead">
-                    <li class="nav-item">
-                        <span class="nav-link active">Request</span>
-                    </li>
-                    <li class="nav-item">
-                        <span class="nav-link">Response</span>
-                    </li>
-                </ul>
-            </div>
-            <div>
-                xxxxxxxxxxxxxxxxxxxx
+        <div id="record-detail">
+            <ul class="nav nav-pills" id="#record-detail-tabs">
+                <li class="nav-item">
+                    <span class="nav-link disabled">x</span>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link nav-link-small active">Request</span>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link">Response</span>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Action...</a>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#">Mock</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item disabled" href="#">Download Request</a>
+                        <a class="dropdown-item" href="#">Download Response</a>
+                    </div>
+                </li>
+            </ul>
+            <div id="record-detail-content">
+                <div v-for="i in 15">
+                    <span style="font-weight:bold;">xxxxx:</span> xxxxxxxxxxxxxxxxxxx
+                </div>
+                <hr>
+                <div v-for="i in 15">
+                    <span style="font-weight:bold;">xxxxx:</span> xxxxxxxxxxxxxxxxxxx
+                </div>
             </div>
         </div>
     </div>
