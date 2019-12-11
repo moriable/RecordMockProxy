@@ -22,6 +22,13 @@ const Record = {
             .catch((error) => {
                 console.log(error);
             });
+
+        const socket = new WebSocket(`ws://${location.host}/api/websocket`);
+        socket.addEventListener('open', function (event) {
+        });
+        socket.addEventListener('message', function (event) {
+            console.log('Message from server ', event.data);
+        });
     },
     methods: {
         showDetail: function(i) {

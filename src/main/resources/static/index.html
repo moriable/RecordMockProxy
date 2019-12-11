@@ -73,6 +73,15 @@ body {
     overflow: auto;
     border-top: 1px solid #CCC;
     padding: 0.5rem;
+    font-size: 0.8rem
+}
+
+.header-row {
+    margin-bottom: 0.25rem;
+}
+
+.header-name {
+    font-weight: bold;
 }
 
 .nav-link-small {
@@ -170,15 +179,15 @@ body {
                 </ul>
                 <div id="record-detail-content">
                     <div v-if="detailTab == 'request'">
-                        <div v-for="(value,name) in records[selectIndex].request.headers">
-                            <span style="font-weight:bold;">{{name}}:</span> {{value}}
+                        <div class="header-row" v-for="(value,name) in records[selectIndex].request.headers">
+                            <span class="header-name">{{name}}:</span> {{value}}
                         </div>
                         <hr>
                         {{records[selectIndex].request.bodyfile}}
                     </div>
                     <div v-if="detailTab == 'response'">
-                        <div v-for="(value,name) in records[selectIndex].response.headers">
-                            <span style="font-weight:bold;">{{name}}:</span> {{value}}
+                        <div class="header-row" v-for="(value,name) in records[selectIndex].response.headers">
+                            <span class="header-name">{{name}}:</span> {{value}}
                         </div>
                         <hr>
                         {{records[selectIndex].response.bodyfile}}
