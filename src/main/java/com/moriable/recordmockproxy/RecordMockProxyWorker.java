@@ -146,7 +146,7 @@ public class RecordMockProxyWorker implements Runnable {
             contentType = response.getHeaders().get("Content-Type").get(0);
             contentType = contentType.substring(contentType.indexOf("/") + 1);
         }
-        String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType + "^" + (new Date().getTime() - requestDate.getTime());
+        String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType;
 
         if (!socket.isClosed()) {
             File responseFile = new File(recordDir.getAbsolutePath() + File.separator + responseName);
@@ -159,7 +159,7 @@ public class RecordMockProxyWorker implements Runnable {
             logger.warning("client socket closed");
         }
 
-        putResponse(requestName, responseName, response);
+        putResponse(requestName, responseName, response, new Date().getTime() - requestDate.getTime());
 
         if (relaysocket != null) {
             relaysocket.close();
@@ -179,6 +179,7 @@ public class RecordMockProxyWorker implements Runnable {
         }
 
         RecordModel.RequestModel requestModel = new RecordModel.RequestModel();
+        requestModel.setMethod(request.getMethod());
         requestModel.setHost(request.getUri().getHost());
         requestModel.setPort(port);
         requestModel.setPath(request.getUri().getPath());
@@ -197,7 +198,7 @@ public class RecordMockProxyWorker implements Runnable {
         recordStorage.notifyRequest(requestModel);
     }
 
-    public void putResponse(String requestName, String responseName, RawHttpResponse response) {
+    public void putResponse(String requestName, String responseName, RawHttpResponse response, long time) {
         RecordModel recordModel = recordStorage.get(requestName);
 
         RecordModel.ResponseModel responseModel = new RecordModel.ResponseModel();
@@ -207,6 +208,7 @@ public class RecordMockProxyWorker implements Runnable {
             responseModel.getHeaders().put(s, response.getHeaders().get(s).get(0));
         });
         responseModel.setBodyfile(responseName);
+        responseModel.setTime(time);
 
         recordModel.setResponse(responseModel);
         recordStorage.notifyResponse(responseModel);
