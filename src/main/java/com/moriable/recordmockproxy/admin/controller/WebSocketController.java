@@ -51,22 +51,22 @@ public class WebSocketController implements RecordStorage.RequestResponseListene
     }
 
     @Override
-    public void onRequest(RecordModel.RequestModel requestModel) {
+    public void onRequest(RecordModel recordModel) {
         execService.submit(() -> {
             Map<String, Object> messageMap = new HashMap<>();
             messageMap.put("type", "REQUEST");
-            messageMap.put("data", requestModel);
+            messageMap.put("data", recordModel);
 
             bloadcast(gson.toJson(messageMap));
         });
     }
 
     @Override
-    public void onResponse(RecordModel.ResponseModel responseModel) {
+    public void onResponse(RecordModel recordModel) {
         execService.submit(() -> {
             Map<String, Object> messageMap = new HashMap<>();
             messageMap.put("type", "RESPONSE");
-            messageMap.put("data", responseModel);
+            messageMap.put("data", recordModel);
 
             bloadcast(new Gson().toJson(messageMap));
         });

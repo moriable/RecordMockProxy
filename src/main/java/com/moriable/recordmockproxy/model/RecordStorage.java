@@ -34,20 +34,20 @@ public class RecordStorage {
         listenerSet.add(listener);
     }
 
-    public void notifyRequest(RecordModel.RequestModel requestModel) {
+    public void notifyRequest(RecordModel recordModel) {
         listenerSet.forEach(listener -> {
-            listener.onRequest(requestModel);
+            listener.onRequest(recordModel);
         });
     }
 
-    public void notifyResponse(RecordModel.ResponseModel responseModel) {
+    public void notifyResponse(RecordModel recordModel) {
         listenerSet.forEach(listener -> {
-            listener.onResponse(responseModel);
+            listener.onResponse(recordModel);
         });
     }
 
     public static interface RequestResponseListener {
-        void onRequest(RecordModel.RequestModel requestModel);
-        void onResponse(RecordModel.ResponseModel responseModel);
+        void onRequest(RecordModel recordModel);
+        void onResponse(RecordModel recordModel);
     }
 }

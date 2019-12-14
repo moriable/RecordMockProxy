@@ -167,9 +167,9 @@ public class RecordMockProxyWorker implements Runnable {
     }
 
     public void putRequest(String requestName, Date date, RawHttpRequest request, boolean isSSL) {
-        RecordModel dto = new RecordModel();
-        dto.setId(requestName);
-        dto.setDate(date.getTime());
+        RecordModel recordModel = new RecordModel();
+        recordModel.setId(requestName);
+        recordModel.setDate(date.getTime());
 
         int port = request.getUri().getPort();
         if (port == -1 && isSSL) {
@@ -187,15 +187,18 @@ public class RecordMockProxyWorker implements Runnable {
         requestModel.setHeaders(new HashMap<>());
         request.getHeaders().getHeaderNames().forEach(s -> {
             requestModel.getHeaders().put(s, request.getHeaders().get(s).get(0));
+            if (s.equals("Content-Type")) {
+                requestModel.setContentType(request.getHeaders().get(s).get(0));
+            }
         });
         if (request.getBody().isPresent()) {
             requestModel.setBodyfile(requestName);
         }
 
-        dto.setRequest(requestModel);
+        recordModel.setRequest(requestModel);
 
-        recordStorage.put(requestName, dto);
-        recordStorage.notifyRequest(requestModel);
+        recordStorage.put(requestName, recordModel);
+        recordStorage.notifyRequest(recordModel);
     }
 
     public void putResponse(String requestName, String responseName, RawHttpResponse response, long time) {
@@ -206,12 +209,15 @@ public class RecordMockProxyWorker implements Runnable {
         responseModel.setHeaders(new HashMap<>());
         response.getHeaders().getHeaderNames().forEach(s -> {
             responseModel.getHeaders().put(s, response.getHeaders().get(s).get(0));
+            if (s.equals("Content-Type")) {
+                responseModel.setContentType(response.getHeaders().get(s).get(0));
+            }
         });
         responseModel.setBodyfile(responseName);
         responseModel.setTime(time);
 
         recordModel.setResponse(responseModel);
-        recordStorage.notifyResponse(responseModel);
+        recordStorage.notifyResponse(recordModel);
     }
 
     private RawHttpResponse responseMock(String mockId) {

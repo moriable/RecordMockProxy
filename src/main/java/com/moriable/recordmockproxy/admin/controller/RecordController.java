@@ -62,6 +62,8 @@ public class RecordController extends BaseController {
     public Route getResponseBody = (request, response) -> {
         String recordId = getOriginalId(request.params(":recordId"), 5, 2);
 
+        System.out.println(recordId);
+
         RecordModel recordModel = recordStorage.get(recordId);
         if (recordModel == null) {
             throw new Exception("record not found.");

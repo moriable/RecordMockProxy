@@ -49,7 +49,7 @@ body {
 
 #record-list-table tbody tr td {
     font-size: 0.8rem;
-    padding: 0.1rem;
+    padding: 0.1rem 0.3rem;
     overflow: hidden;
     border-right: 1px solid #AAA;
     white-space: nowrap;
@@ -145,12 +145,12 @@ body {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(record, index) in records" v-on:click="showDetail(index)" v-bind:style="index == selectIndex ? 'background-color:#CCF': ''">
-                        <td>{{ record.date | timeformat }}</td>
-                        <td>{{ record.request.host }}{{ record.request.path }}{{ record.request.query ? '?' : '' }}{{ record.request.query }}</td>
-                        <td>{{ record.request.method }}</td>
-                        <td v-if="record.response">{{ record.response.statusCode }}</td><td v-else><br></td>
-                        <td v-if="record.response">{{ record.response.time }}</td><td v-else><br></td>
+                    <tr v-for="(id, index) in recordRows" v-on:click="showDetail(id)" v-bind:style="id == selectId ? 'background-color:#007bff;color:white;': ''">
+                        <td>{{ records[id].date | timeformat }}</td>
+                        <td>{{ records[id].request.host }}{{ records[id].request.path }}{{ records[id].request.query ? '?' : '' }}{{ records[id].request.query }}</td>
+                        <td>{{ records[id].request.method }}</td>
+                        <td v-if="records[id].response">{{ records[id].response.statusCode }}</td><td v-else><br></td>
+                        <td v-if="records[id].response">{{ records[id].response.time }}</td><td v-else><br></td>
                     </tr>
                 </tbody>
             </table>
@@ -179,18 +179,18 @@ body {
                 </ul>
                 <div id="record-detail-content">
                     <div v-if="detailTab == 'request'">
-                        <div class="header-row" v-for="(value,name) in records[selectIndex].request.headers">
+                        <div class="header-row" v-for="(value,name) in records[selectId].request.headers">
                             <span class="header-name">{{name}}:</span> {{value}}
                         </div>
                         <hr>
-                        {{records[selectIndex].request.bodyfile}}
+                        {{records[selectId].request.bodyfile}}
                     </div>
                     <div v-if="detailTab == 'response'">
-                        <div class="header-row" v-for="(value,name) in records[selectIndex].response.headers">
+                        <div class="header-row" v-for="(value,name) in records[selectId].response.headers">
                             <span class="header-name">{{name}}:</span> {{value}}
                         </div>
                         <hr>
-                        {{records[selectIndex].response.bodyfile}}
+                        <body-content v-bind:targetid="selectId" v-bind:contenttype="records[selectId].response.contentType" type="response"></body-content>
                     </div>
                 </div>
             </div>

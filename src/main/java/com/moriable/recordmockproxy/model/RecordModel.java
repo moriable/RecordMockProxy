@@ -22,6 +22,7 @@ public class RecordModel extends AbstractModel {
         private String path;
         private String query;
         private Map<String, String> headers;
+        private String contentType;
         private String bodyfile;
     }
 
@@ -30,6 +31,7 @@ public class RecordModel extends AbstractModel {
         private int statusCode;
         private String statusMessage;
         private Map<String, String> headers;
+        private String contentType;
         private String bodyfile;
         private long time;
     }

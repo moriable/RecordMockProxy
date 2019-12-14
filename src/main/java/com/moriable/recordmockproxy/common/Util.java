@@ -69,7 +69,7 @@ public class Util {
 
         int pathLen = len - host.length() - 1;
 
-        return host + "+" + path.substring(path.length() - pathLen);
+        return host + "-" + path.substring(path.length() - pathLen);
     }
 
     public static String getHash(String str) {
