@@ -138,8 +138,9 @@ body {
                 <thead>
                     <tr style="position:sticky; top:0rem;">
                         <th style="width:8%;">Date</th>
-                        <th style="width:66%;">Path</th>
+                        <th style="width:60%;">Path</th>
                         <th style="width:8%;">Method</th>
+                        <th style="width:8%;">Type</th>
                         <th style="width:8%;">Status</th>
                         <th style="width:8%;">Time</th>
                     </tr>
@@ -149,6 +150,7 @@ body {
                         <td>{{ records[id].date | timeformat }}</td>
                         <td>{{ records[id].request.host }}{{ records[id].request.path }}{{ records[id].request.query ? '?' : '' }}{{ records[id].request.query }}</td>
                         <td>{{ records[id].request.method }}</td>
+                        <td v-if="records[id].response">{{ records[id].response.contentType }}</td>
                         <td v-if="records[id].response">{{ records[id].response.statusCode }}</td><td v-else><br></td>
                         <td v-if="records[id].response">{{ records[id].response.time }}</td><td v-else><br></td>
                     </tr>
@@ -198,9 +200,8 @@ body {
     </div>
 </script>
 
-<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+
+
 <script src="js/index.js"></script>
 </body>
 </html>

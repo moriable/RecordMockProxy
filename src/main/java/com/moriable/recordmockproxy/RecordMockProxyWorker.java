@@ -149,10 +149,15 @@ public class RecordMockProxyWorker implements Runnable {
         String responseName = requestName + "^" + response.getStatusCode() + "^" + contentType;
 
         if (!socket.isClosed()) {
-            File responseFile = new File(recordDir.getAbsolutePath() + File.separator + responseName);
-            responseFile.createNewFile();
-            try(FileOutputStream responseStream = new FileOutputStream(responseFile)) {
-                response.writeTo(new OutputStream[]{socket.getOutputStream(), responseStream}, 8192);
+            if (response.getBody().isPresent()) {
+                File responseFile = new File(recordDir.getAbsolutePath() + File.separator + responseName);
+                responseFile.createNewFile();
+                try (FileOutputStream responseStream = new FileOutputStream(responseFile)) {
+                    response.writeTo(new OutputStream[]{socket.getOutputStream(), responseStream}, 8192);
+                }
+            } else {
+                response.writeTo(new OutputStream[]{socket.getOutputStream()}, 8192);
+                responseName = null;
             }
             socket.close();
         } else {
