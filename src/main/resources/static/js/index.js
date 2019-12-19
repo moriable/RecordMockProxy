@@ -4,24 +4,30 @@ Vue.filter('timeformat', function (timestamp) {
 
 Vue.component('body-content', {
     props: ['targetid', 'contenttype', 'type'],
-    template: '<span v-html="body"></span>',
+    template: `<span v-if="isRaw" v-html="body"></span>
+        <span v-else>{{body}}</span>`,
+
     data: function() {
         return {
+            isRaw: false,
             body: ''
         }
     },
-    created: function() {
-        console.log(this.targetid, this.contenttype, this.type);
-        if (this.contenttype.startsWith('image/')) {
-            this.body = `<img src="/api/record/${this.targetid}/${this.type}">`;
-        } else {
-            axios.get(`/api/record/${this.targetid}/${this.type}`)
-                .then((response) => {
-                    this.body = `<pre>${response.data}</pre>`
-                })
-                .catch((error) => {
-                    console.log(error);
-                });
+    watch: {
+        targetid: function() {
+            this.isRaw = this.contenttype.startsWith('image/');
+            if (this.isRaw) {
+                this.body = `<img src="/api/record/${this.targetid}/${this.type}">`;
+            } else {
+                axios.get(`/api/record/${this.targetid}/${this.type}`)
+                    .then((response) => {
+                        this.body = `<pre>${response.data}</pre>`;
+                    })
+                    .catch((error) => {
+                        this.body = '';
+                        console.log(error);
+                    });
+            }
         }
     }
 });
@@ -71,11 +77,14 @@ const Record = {
         closeDetail: function(event) {
             this.detail = false;
             this.selectId = -1;
+        },
+        createMock: function() {
+            console.log('createMock');
         }
     }
 }
 const Mock = {
-    template: '<div>mock</div>',
+    template: '#mock',
     data: () => {
         return {
         }

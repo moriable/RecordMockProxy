@@ -5,7 +5,7 @@
     <title>RecordMockProxy</title>
 
     <link rel="stylesheet" href="css/bootstrap.css">
-
+    <link rel="stylesheet" href="css/fontawesome.css">
 
     <style>
 html, body, #app {
@@ -21,8 +21,26 @@ body {
     border-bottom: 1px solid #CCC;
 }
 
+.menu-container {
+    width:100%;
+    position: sticky;
+    top: 0px;
+    background-color:#FFF;
+    height: 2.8rem;
+    padding-left: 1rem;
+    border-bottom: 1px solid #CCC;
+
+    display: flex;
+
+    z-index: 1000;
+}
+
 #record-content {
     height:100%;
+}
+
+#record-body {
+    height:calc(100% - 2.8rem);
     display: flex;
 }
 
@@ -44,7 +62,7 @@ body {
 
     position: sticky;
     top: -1px;
-    background-color:#F0F0F0;
+    background-color:#FFF;
 }
 
 #record-list-table tbody tr td {
@@ -59,7 +77,8 @@ body {
     width: 30rem;
     height:100%;
     padding-top:0.5rem;
-    box-shadow: -0.1rem -0rem 0.5rem rgba(0,0,0,0.4);
+    box-shadow: -0.1rem 0.5rem 0.5rem rgba(0,0,0,0.4);
+    border-top: 1px solid #CCC;
 
     z-index: 2000;
 }
@@ -109,6 +128,9 @@ body {
     <script src="js/vendor/vue-router.js"></script>
     <script src="js/vendor/axios.js"></script>
     <script src="js/vendor/moment-with-locales.min.js"></script>
+    <script src="js/vendor/jquery-3.4.1.slim.min.js"></script>
+    <script src="js/vendor/popper.min.js"></script>
+    <script src="js/vendor/bootstrap.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -117,13 +139,13 @@ body {
             <span class="nav-link disabled">RecordMockProxy</span>
         </li>
         <li class="nav-item">
-            <router-link class="nav-link" active-class="active" to="/record">Record</router-link>
+            <router-link class="nav-link" active-class="active" to="/record"><span class="fa fa-database"></span> Record</router-link>
         </li>
         <li class="nav-item">
-            <router-link class="nav-link" active-class="active" to="/mock">Mock</router-link>
+            <router-link class="nav-link" active-class="active" to="/mock"><span class="fa fa-clone"></span> Mock</router-link>
         </li>
         <li class="nav-item">
-            <router-link class="nav-link" active-class="active" to="/proxy">Proxy</router-link>
+            <router-link class="nav-link" active-class="active" to="/proxy"><span class="fa fa-server"></span> Proxy</router-link>
         </li>
     </ul>
     <div id="content">
@@ -133,74 +155,97 @@ body {
 
 <script type="text/x-template" id="record">
     <div id="record-content">
-        <div id="record-list">
-            <table class="table table-sm table-striped" id="record-list-table">
-                <thead>
-                    <tr style="position:sticky; top:0rem;">
-                        <th style="width:8%;">Date</th>
-                        <th style="width:60%;">Path</th>
-                        <th style="width:8%;">Method</th>
-                        <th style="width:8%;">Type</th>
-                        <th style="width:8%;">Status</th>
-                        <th style="width:8%;">Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(id, index) in recordRows" v-on:click="showDetail(id)" v-bind:style="id == selectId ? 'background-color:#007bff;color:white;': ''">
-                        <td>{{ records[id].date | timeformat }}</td>
-                        <td>{{ records[id].request.host }}{{ records[id].request.path }}{{ records[id].request.query ? '?' : '' }}{{ records[id].request.query }}</td>
-                        <td>{{ records[id].request.method }}</td>
-                        <td v-if="records[id].response">{{ records[id].response.contentType }}</td>
-                        <td v-if="records[id].response">{{ records[id].response.statusCode }}</td><td v-else><br></td>
-                        <td v-if="records[id].response">{{ records[id].response.time }}</td><td v-else><br></td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="form-inline menu-container">
+            <button class="btn btn-outline-secondary btn-sm">
+                <span class="fa fa-trash-alt"></span>
+            </button>
+            &nbsp;
+            <button class="btn btn-outline-secondary btn-sm">
+                <span class="fa fa-file-download"></span>
+            </button>
+            &nbsp;
+            <input type="text" class="form-control form-control-sm" placeholder="path filter" size="80">
         </div>
-        <transition name="slide-fade">
-            <div id="record-detail" v-if="detail">
-                <ul class="nav nav-pills" id="#record-detail-tabs">
-                    <li class="nav-item" v-on:click="closeDetail">
-                        <span class="nav-link nav-link-small disabled">x</span>
-                    </li>
-                    <li class="nav-item">
-                        <span class="nav-link nav-link-small" v-on:click="detailTab='request'" v-bind:class="{active: detailTab=='request'}">Request</span>
-                    </li>
-                    <li class="nav-item">
-                        <span class="nav-link nav-link-small" v-on:click="detailTab='response'" v-bind:class="{active: detailTab=='response'}">Response</span>
-                    </li>
-                    <li class="nav-item nav-link-small dropdown">
-                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false" style="padding: 0rem 0.5rem">Action...</a>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#">Mock</a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item disabled" href="#">Download Request</a>
-                            <a class="dropdown-item" href="#">Download Response</a>
+        <div id="record-body">
+            <div id="record-list">
+                <table class="table table-sm table-striped" id="record-list-table">
+                    <thead>
+                        <tr style="position:sticky; top:0rem;">
+                            <th style="width:8%;">Date</th>
+                            <th style="width:60%;">Path</th>
+                            <th style="width:8%;">Method</th>
+                            <th style="width:8%;">Type</th>
+                            <th style="width:8%;">Status</th>
+                            <th style="width:8%;">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(id, index) in recordRows" v-on:click="showDetail(id)" v-bind:style="id == selectId ? 'background-color:#007bff;color:white;': ''">
+                            <td>{{ records[id].date | timeformat }}</td>
+                            <td>{{ records[id].request.host }}{{ records[id].request.path }}{{ records[id].request.query ? '?' : '' }}{{ records[id].request.query }}</td>
+                            <td>{{ records[id].request.method }}</td>
+                            <td v-if="records[id].response">{{ records[id].response.contentType }}</td>
+                            <td v-if="records[id].response">{{ records[id].response.statusCode }}</td><td v-else><br></td>
+                            <td v-if="records[id].response">{{ records[id].response.time }}</td><td v-else><br></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <transition name="slide-fade">
+                <div id="record-detail" v-if="detail">
+                    <ul class="nav nav-pills" id="#record-detail-tabs">
+                        <li class="nav-item" v-on:click="closeDetail">
+                            <span class="nav-link nav-link-small disabled">x</span>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link nav-link-small" v-on:click="detailTab='request'" v-bind:class="{active: detailTab=='request'}">Request</span>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link nav-link-small" v-on:click="detailTab='response'" v-bind:class="{active: detailTab=='response'}">Response</span>
+                        </li>
+                        <li class="nav-item nav-link-small dropdown">
+                            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false" style="padding: 0rem 0.5rem">Action...</a>
+                            <div class="dropdown-menu">
+                                <span class="dropdown-item" v-on:click="createMock()">Mock</span>
+                                <div class="dropdown-divider"></div>
+                                <span class="dropdown-item disabled" href="#">Download Request</span>
+                                <span class="dropdown-item" href="#">Download Response</span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div id="record-detail-content">
+                        <div v-if="detailTab == 'request'">
+                            <div class="header-row" v-for="(value,name) in records[selectId].request.headers">
+                                <span class="header-name">{{name}}:</span> {{value}}
+                            </div>
+                            <hr>
+                            {{records[selectId].request.bodyfile}}
                         </div>
-                    </li>
-                </ul>
-                <div id="record-detail-content">
-                    <div v-if="detailTab == 'request'">
-                        <div class="header-row" v-for="(value,name) in records[selectId].request.headers">
-                            <span class="header-name">{{name}}:</span> {{value}}
+                        <div v-if="detailTab == 'response'">
+                            <div class="header-row" v-for="(value,name) in records[selectId].response.headers">
+                                <span class="header-name">{{name}}:</span> {{value}}
+                            </div>
+                            <hr>
+                            <body-content v-bind:targetid="selectId" v-bind:contenttype="records[selectId].response.contentType" type="response"></body-content>
                         </div>
-                        <hr>
-                        {{records[selectId].request.bodyfile}}
-                    </div>
-                    <div v-if="detailTab == 'response'">
-                        <div class="header-row" v-for="(value,name) in records[selectId].response.headers">
-                            <span class="header-name">{{name}}:</span> {{value}}
-                        </div>
-                        <hr>
-                        <body-content v-bind:targetid="selectId" v-bind:contenttype="records[selectId].response.contentType" type="response"></body-content>
                     </div>
                 </div>
-            </div>
-        </transition>
+            </transition>
+        </div>
     </div>
 </script>
 
-
+<script type="text/x-template" id="mock">
+    <div id="mock-content">
+        <div class="form-inline menu-container">
+            <button class="btn btn-outline-secondary btn-sm">
+                <span class="fa fa-trash-alt"></span>
+            </button>
+            &nbsp;
+            <input type="text" class="form-control form-control-sm" placeholder="path filter" size="80">
+        </div>
+    </div>
+</script>
 
 <script src="js/index.js"></script>
 </body>
