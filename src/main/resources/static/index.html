@@ -6,127 +6,7 @@
 
     <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/fontawesome.css">
-
-    <style>
-html, body, #app {
-    height: 100%;
-}
-body {
-    padding-top: 1rem;
-}
-
-img {
-    width: 100%;
-}
-
-#content {
-    height:calc(100% - 3rem);
-    overflow:auto;
-    border-bottom: 1px solid #CCC;
-}
-
-.menu-container {
-    width:100%;
-    position: sticky;
-    top: 0px;
-    background-color:#FFF;
-    height: 2.8rem;
-    padding-left: 1rem;
-    border-bottom: 1px solid #CCC;
-
-    display: flex;
-
-    z-index: 1000;
-}
-
-#record-content {
-    height:100%;
-}
-
-#record-body {
-    height:calc(100% - 2.8rem);
-    display: flex;
-}
-
-#record-list {
-    flex: 1;
-    height:100%;
-    overflow:auto;
-}
-
-#record-list-table {
-    border-bottom: 1px solid #AAA;
-    table-layout: fixed;
-}
-
-#record-list-table thead tr th {
-    font-size: 0.8rem;
-    padding: 0.1rem;
-    border-right: 1px solid #AAA;
-
-    position: sticky;
-    top: -1px;
-    background-color:#FFF;
-}
-
-#record-list-table tbody tr td {
-    font-size: 0.8rem;
-    padding: 0.1rem 0.3rem;
-    overflow: hidden;
-    border-right: 1px solid #AAA;
-    white-space: nowrap;
-}
-
-#record-detail {
-    width: 30rem;
-    height:100%;
-    padding-top:0.5rem;
-    box-shadow: -0.1rem 0.5rem 0.5rem rgba(0,0,0,0.4);
-    border-top: 1px solid #CCC;
-
-    z-index: 2000;
-}
-
-#record-detail-tabs {
-    height:3rem;
-}
-
-#record-detail-content {
-    height: calc(100% - 3rem);
-    overflow: auto;
-    border-top: 1px solid #CCC;
-    padding: 0.5rem;
-    font-size: 0.8rem
-}
-
-.header-row {
-    margin-bottom: 0.25rem;
-}
-
-.header-name {
-    font-weight: bold;
-}
-
-.nav-link-small {
-    padding: 0.2rem 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-/* transition */
-
-.slide-fade-enter-active {
-  transition: all .1s ease;
-}
-.slide-fade-leave-active {
-  transition: all .1s ease;
-}
-.slide-fade-enter, .slide-fade-leave-to
-/* .slide-fade-leave-active below version 2.1.8 */ {
-  transform: translateX(300px);
-  opacity: 0;
-}
-
-    </style>
+    <link rel="stylesheet" href="css/index.css">
 
     <script src="js/vendor/vue.js"></script>
     <script src="js/vendor/vue-router.js"></script>
@@ -158,8 +38,8 @@ img {
 </div>
 
 <script type="text/x-template" id="record">
-    <div id="record-content">
-        <div class="form-inline menu-container">
+    <div class="tab-content">
+        <div class="form-inline tab-menu">
             <button class="btn btn-outline-secondary btn-sm">
                 <span class="fa fa-trash-alt"></span>
             </button>
@@ -169,8 +49,13 @@ img {
             </button>
             &nbsp;
             <input type="text" class="form-control form-control-sm" placeholder="path filter" size="80">
+            &nbsp;
+            <div class="custom-control custom-switch secondary">
+                <input type="checkbox" class="custom-control-input" id="customSwitch1">
+                <label class="custom-control-label" for="customSwitch1">Auto scroll</label>
+            </div>
         </div>
-        <div id="record-body">
+        <div class="tab-body">
             <div id="record-list">
                 <table class="table table-sm table-striped" id="record-list-table">
                     <thead>
@@ -199,7 +84,7 @@ img {
                 <div id="record-detail" v-if="detail">
                     <ul class="nav nav-pills" id="#record-detail-tabs">
                         <li class="nav-item" v-on:click="closeDetail">
-                            <span class="nav-link nav-link-small disabled">x</span>
+                            <span class="nav-link nav-link-small disabled"><span class="fa fa-times"></span></span>
                         </li>
                         <li class="nav-item">
                             <span class="nav-link nav-link-small" v-on:click="detailTab='request'" v-bind:class="{active: detailTab=='request'}">Request</span>
@@ -240,13 +125,127 @@ img {
 </script>
 
 <script type="text/x-template" id="mock">
-    <div id="mock-content">
-        <div class="form-inline menu-container">
+    <div class="tab-content">
+        <div class="form-inline tab-menu">
+            <button class="btn btn-outline-secondary btn-sm">
+                <span class="fa fa-plus"></span>
+            </button>
+            &nbsp;
             <button class="btn btn-outline-secondary btn-sm">
                 <span class="fa fa-trash-alt"></span>
             </button>
             &nbsp;
             <input type="text" class="form-control form-control-sm" placeholder="path filter" size="80">
+        </div>
+        <div class="tab-body">
+            <div id="mock-list">
+                <table class="table table-sm table-striped" id="mock-list-table">
+                    <thead>
+                    <tr style="position:sticky; top:0rem;">
+                        <th style="width:90%;">Path</th>
+                        <th style="width:10%;">Method</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="mock in mocks" v-on:click="showDetail(mock.target.id)" v-bind:style="mock.target.id == selectId ? 'background-color:#007bff;color:white;': ''">
+                            <td>{{ mock.target.host }}{{ mock.target.path }}{{ mock.target.query ? '?' : '' }}{{ mock.target.query }}</td>
+                            <td>{{ mock.target.method }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="mock-detail">
+                <div id="mock-detail-content">
+                    <form>
+                        <div class="input-group input-group-sm mb-3">
+                            <div class="input-group-prepend">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">POST</button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="#">GET</a>
+                                    <a class="dropdown-item" href="#">POST</a>
+                                    <a class="dropdown-item" href="#">PUT</a>
+                                    <a class="dropdown-item" href="#">DELETE</a>
+                                    <a class="dropdown-item" href="#">HEAD</a>
+                                    <a class="dropdown-item" href="#">PATCH</a>
+                                    <a class="dropdown-item" href="#">OPTIONS</a>
+                                </div>
+                            </div>
+                            <input type="text" class="form-control">
+                            <div class="input-group-append" id="button-addon4">
+                                <button class="btn btn-outline-secondary" type="button"><span class="fa fa-save"></span></button>
+                                <button class="btn btn-outline-secondary" type="button"><span class="fa fa-trash-alt"></span></button>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="mockRule" class="col-sm-1 col-form-label">Rule</label>
+                            <div class="col-sm-11">
+                                <select class="form-control form-control-sm" id="mockRule">
+                                    <option>REPEAT</option>
+                                    <option>ONCE</option>
+                                    <option>RANDOM</option>
+                                    <option>PROXY</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <ul class="nav nav-tabs">
+                            <li class="nav-item">
+                                <span class="nav-link active">1<span class="fa fa-times" style="margin-left:1rem;"></span></span>
+                            </li>
+                            <li class="nav-item">
+                                <span class="nav-link">2</span>
+                            </li>
+                            <li class="nav-item">
+                                <span class="nav-link">3</span>
+                            </li>
+                            <li class="nav-item">
+                                <span class="nav-link">4</span>
+                            </li>
+                            <li class="nav-item">
+                                <span class="nav-link disabled"><span class="fa fa-plus"></span></span>
+                            </li>
+                        </ul>
+                        <div id="mock-response">
+                            <table class="table table-sm table-striped" id="mock-head-table">
+                                <thead>
+                                <tr style="position:sticky; top:0rem;">
+                                    <th style="width:20%;">Header</th>
+                                    <th style="width:75%;border-right:none;">Value</th>
+                                    <th class="button-cell" style="width:5%;"></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="n in 10">
+                                    <td contenteditable="true">Content-Type</td>
+                                    <td contenteditable="true" style="border-right:none;">text/html;</td>
+                                    <td ><span class="fa fa-times"></span></td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true"></td>
+                                    <td contenteditable="true" style="border-right:none;"></td>
+                                    <td class="button-cell"></td>
+                                </tr>
+                                </tbody>
+                            </table>
+
+                            <h6>Body</h6>
+                            <div class="btn-group btn-group-toggle " data-toggle="buttons">
+                                <label class="btn btn-outline-secondary btn-sm active">
+                                    <input type="radio" name="options" id="option1" autocomplete="off" checked> Text
+                                </label>
+                                <label class="btn btn-outline-secondary btn-sm">
+                                    <input type="radio" name="options" id="option2" autocomplete="off"> File
+                                </label>
+                            </div>
+                            <pre id="mock-text-body" contenteditable="true">
+                                {
+                                    "test": "result"
+                                }
+                            </pre>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </script>

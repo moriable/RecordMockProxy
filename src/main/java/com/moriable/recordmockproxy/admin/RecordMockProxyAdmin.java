@@ -37,8 +37,8 @@ public class RecordMockProxyAdmin {
         this.port = adminPort;
 
         webSocketController = new WebSocketController();
-        recordController = new RecordController(recordStorage, recordDir);
         mockController = new MockController(mockStorage, mockDir);
+        recordController = new RecordController(recordStorage, recordDir, mockController);
         certController = new CertController(cert);
 
         recordStorage.addListener(webSocketController);
@@ -61,6 +61,7 @@ public class RecordMockProxyAdmin {
                 get("/:recordId", recordController.getRecord, gson::toJson);
                 get("/:recordId/request", recordController.getRequestBody);
                 get("/:recordId/response", recordController.getResponseBody);
+                post("/:recordId/mock", recordController.toMock, gson::toJson);
             });
             path("/mock", () -> {
                 get("", mockController.getMockAll); // toJson is inside

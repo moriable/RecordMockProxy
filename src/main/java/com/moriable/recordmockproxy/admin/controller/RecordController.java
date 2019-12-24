@@ -1,11 +1,14 @@
 package com.moriable.recordmockproxy.admin.controller;
 
+import com.moriable.recordmockproxy.admin.form.MockForm;
+import com.moriable.recordmockproxy.model.MockModel;
 import com.moriable.recordmockproxy.model.RecordModel;
 import com.moriable.recordmockproxy.model.RecordStorage;
 import org.apache.commons.io.FileUtils;
 import spark.Route;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.HashMap;
 
 public class RecordController extends BaseController {
@@ -13,9 +16,12 @@ public class RecordController extends BaseController {
     private RecordStorage recordStorage;
     private File recordDir;
 
-    public RecordController(RecordStorage recordStorage, File recordDir) {
+    private MockController mockController;
+
+    public RecordController(RecordStorage recordStorage, File recordDir, MockController mockController) {
         this.recordStorage = recordStorage;
         this.recordDir = recordDir;
+        this.mockController = mockController;
     }
 
     public Route getRecord = (request, response) -> {
@@ -62,8 +68,6 @@ public class RecordController extends BaseController {
     public Route getResponseBody = (request, response) -> {
         String recordId = getOriginalId(request.params(":recordId"), 5, 2);
 
-        System.out.println(recordId);
-
         RecordModel recordModel = recordStorage.get(recordId);
         if (recordModel == null) {
             throw new Exception("record not found.");
@@ -79,5 +83,32 @@ public class RecordController extends BaseController {
 
         responseFile(bodyFile, response, contentType, encoding);
         return response.raw();
+    };
+
+    public Route toMock = (request, response) -> {
+        response.type("application/json");
+
+        String recordId = getOriginalId(request.params(":recordId"), 5, 2);
+        RecordModel recordModel = recordStorage.get(recordId);
+
+        MockForm mockForm = new MockForm();
+        mockForm.setMethod(recordModel.getRequest().getMethod());
+        mockForm.setHost(recordModel.getRequest().getHost());
+        mockForm.setPort(recordModel.getRequest().getPort());
+        mockForm.setPath(recordModel.getRequest().getPath());
+        mockForm.setQuery(recordModel.getRequest().getQuery());
+        mockForm.setRule(MockModel.MockRule.REPEAT.toString());
+
+        MockForm.MockResponseForm mockResponse = new MockForm.MockResponseForm();
+        mockResponse.setStatus(recordModel.getResponse().getStatusCode());
+        mockResponse.setStatusMessage(recordModel.getResponse().getStatusMessage());
+        mockResponse.setType(recordModel.getResponse().getContentType());
+        mockResponse.setHeaders(recordModel.getResponse().getHeaders());
+
+        mockForm.setResponse(mockResponse);
+
+        File bodyFile = new File(recordDir.getAbsolutePath() + File.separator + recordModel.getResponse().getBodyfile());
+
+        return mockController.createMock(mockForm, new FileInputStream(bodyFile), recordModel.getResponse().getContentType());
     };
 }

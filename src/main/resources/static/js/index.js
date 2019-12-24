@@ -21,7 +21,7 @@ Vue.component('body-content', {
             } else {
                 axios.get(`/api/record/${this.targetid}/${this.type}`)
                     .then((response) => {
-                        this.body = `<pre>${response.data}</pre>`;
+                        this.body = response.data;
                     })
                     .catch((error) => {
                         this.body = '';
@@ -80,13 +80,46 @@ const Record = {
         },
         createMock: function() {
             console.log('createMock');
+            axios.post(`/api/record/${this.selectId}/mock`)
+                .then((response) => {
+                    console.log(response);
+                    router.push({path:'mock', query: { id: response.data.target.id }});
+                })
+                .catch((error) => {
+                    console.log(error);
+                    alert(error);
+                });
         }
     }
 }
 const Mock = {
     template: '#mock',
+    created: function() {
+        this.selectId = this.$route.query.id;
+
+        axios.get('/api/mock')
+            .then((response) => {
+                Object.entries(response.data).forEach(([key, value]) => {
+                    if (!this.selectId) {
+                        console.log(value);
+                        this.selectId = value.target.id;
+                    }
+                    this.mocks.push(value);
+                })
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    },
     data: () => {
         return {
+            mocks: [],
+            selectId: ''
+        }
+    },
+    methods: {
+        showDetail: function(id) {
+            this.selectId = id;
         }
     }
 }

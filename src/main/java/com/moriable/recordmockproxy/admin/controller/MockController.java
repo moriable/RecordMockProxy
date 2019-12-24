@@ -184,10 +184,14 @@ public class MockController extends BaseController {
         return mockModel;
     };
 
-    private MockModel createMock(String formString, InputStream body, String defaultContentType) throws JsonValidator.JsonValidatorException, IOException {
+    public MockModel createMock(String formString, InputStream body, String defaultContentType) throws JsonValidator.JsonValidatorException, IOException {
         String json = validator.validate("/mockForm.schema.json", formString);
         MockForm form = new Gson().fromJson(json, MockForm.class);
 
+        return createMock(form, body, defaultContentType);
+    }
+
+    public MockModel createMock(MockForm form, InputStream body, String defaultContentType) throws JsonValidator.JsonValidatorException, IOException {
         MockModel model = new MockModel(form);
 
         File targetDir = new File(mockDir.getAbsolutePath() + File.separator + model.getTarget().getId());

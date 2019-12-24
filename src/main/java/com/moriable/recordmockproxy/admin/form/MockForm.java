@@ -18,7 +18,7 @@ public class MockForm {
     private MockResponseForm response;
 
     @Data
-    public class MockResponseForm {
+    public static class MockResponseForm {
         private int status;
         private String statusMessage;
         private String type;
