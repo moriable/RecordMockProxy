@@ -99,10 +99,11 @@ const Mock = {
 
         axios.get('/api/mock')
             .then((response) => {
-                Object.entries(response.data).forEach(([key, value]) => {
+                Object.entries(response.data).forEach(([key, value], index) => {
                     if (!this.selectId) {
                         console.log(value);
                         this.selectId = value.target.id;
+                        this.selectIndex = index;
                     }
                     this.mocks.push(value);
                 })
@@ -114,12 +115,21 @@ const Mock = {
     data: () => {
         return {
             mocks: [],
-            selectId: ''
+            selectId: '',
+            selectIndex: 0
         }
     },
     methods: {
-        showDetail: function(id) {
+        showDetail: function(id, index) {
             this.selectId = id;
+            this.selectIndex = index;
+        }
+    },
+    computed: {
+        url: function() {
+            var mock = this.mocks[this.selectIndex]
+            if (!mock) return '';
+            return `${mock.target.host}${mock.target.path}${ mock.target.query ? '?' : '' }${mock.target.query}`;
         }
     }
 }

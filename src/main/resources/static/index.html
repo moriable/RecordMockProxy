@@ -147,7 +147,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="mock in mocks" v-on:click="showDetail(mock.target.id)" v-bind:style="mock.target.id == selectId ? 'background-color:#007bff;color:white;': ''">
+                        <tr v-for="(mock, index) in mocks" v-on:click="showDetail(mock.target.id, index)" v-bind:style="mock.target.id == selectId ? 'background-color:#007bff;color:white;': ''">
                             <td>{{ mock.target.host }}{{ mock.target.path }}{{ mock.target.query ? '?' : '' }}{{ mock.target.query }}</td>
                             <td>{{ mock.target.method }}</td>
                         </tr>
@@ -159,7 +159,7 @@
                     <form>
                         <div class="input-group input-group-sm mb-3">
                             <div class="input-group-prepend">
-                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">POST</button>
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ mocks[selectIndex].target.method }}</button>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item" href="#">GET</a>
                                     <a class="dropdown-item" href="#">POST</a>
@@ -170,7 +170,7 @@
                                     <a class="dropdown-item" href="#">OPTIONS</a>
                                 </div>
                             </div>
-                            <input type="text" class="form-control">
+                            <input type="text" class="form-control" v-bind="url">
                             <div class="input-group-append" id="button-addon4">
                                 <button class="btn btn-outline-secondary" type="button"><span class="fa fa-save"></span></button>
                                 <button class="btn btn-outline-secondary" type="button"><span class="fa fa-trash-alt"></span></button>
@@ -179,7 +179,7 @@
                         <div class="form-group row">
                             <label for="mockRule" class="col-sm-1 col-form-label">Rule</label>
                             <div class="col-sm-11">
-                                <select class="form-control form-control-sm" id="mockRule">
+                                <select class="form-control form-control-sm" id="mockRule" v-model="mocks[selectIndex].rule">
                                     <option>REPEAT</option>
                                     <option>ONCE</option>
                                     <option>RANDOM</option>
